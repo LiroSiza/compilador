@@ -74,15 +74,14 @@ class IDE:
             spacing3=2
         )
 
-        # Cursor position label - move to bottom and ensure visibility
-        self.cursor_label = tk.Label(self.main_frame, text="Línea: 1, Columna: 1")
-        self.cursor_label.pack(side=tk.BOTTOM, anchor=tk.SE, padx=5, pady=2)
-
-        # Configure line numbers
-        self.line_numbers.tag_configure('line', justify='right')
-        self.line_numbers.config(bg=self.colors['bg_main'], fg=self.colors['fg_secondary'])
-        self.line_numbers.config(state='disabled')
+        # Main editor scrollbar setup - MOVE THIS HERE
+        self.editor_scroll = tk.Scrollbar(self.editor_with_lines_frame)
+        self.editor_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         
+        # Configure editor scrollbar
+        self.text_area.config(yscrollcommand=self.editor_scroll.set)
+        self.editor_scroll.config(command=self.on_scroll)  # Use on_scroll instead of yview
+
         # Bind events for updating line numbers and cursor position
         self.text_area.bind('<Key>', self.update_line_numbers)
         self.text_area.bind('<KeyRelease>', lambda e: (self.update_line_numbers(), self.update_cursor_position()))
@@ -91,21 +90,27 @@ class IDE:
         self.text_area.bind('<MouseWheel>', self.update_line_numbers)
         self.text_area.bind('<<Change>>', self.update_line_numbers)
         self.text_area.bind('<Configure>', self.update_line_numbers)
+        
+        # Add these new bindings
+        self.text_area.bind('<Return>', self.update_line_numbers)
+        self.text_area.bind('<BackSpace>', self.update_line_numbers)
+        self.text_area.bind('<Delete>', self.update_line_numbers)
 
         # Initial line numbers
         self.update_line_numbers()
 
+        # Cursor position label - move to bottom and ensure visibility
+        self.cursor_label = tk.Label(self.main_frame, text="Línea: 1, Columna: 1")
+        self.cursor_label.pack(side=tk.BOTTOM, anchor=tk.SE, padx=5, pady=2)
+
+        # Configure line numbers
+        self.line_numbers.tag_configure('line', justify='right')
+        self.line_numbers.config(bg=self.colors['bg_main'], fg=self.colors['fg_secondary'])
+        self.line_numbers.config(state='disabled')
+
         # Frame inferior para resultados y errores
         self.output_frame = tk.Frame(self.main_frame, bg=self.colors['bg_main'])
         self.output_frame.pack(fill=tk.BOTH, expand=True)
-
-        # Main editor scrollbar setup
-        self.editor_scroll = tk.Scrollbar(self.editor_with_lines_frame)
-        self.editor_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # Configure editor scrollbar
-        self.text_area.config(yscrollcommand=self.editor_scroll.set)
-        self.editor_scroll.config(command=self.text_area.yview)
 
         # Crear el área de texto para el editor (70% del alto)
         # self.text_area = tk.Text(self.editor_frame, wrap=tk.WORD, undo=True)
@@ -263,6 +268,7 @@ class IDE:
         self.file_menu.add_command(label="Abrir", command=self.open_file)
         self.file_menu.add_command(label="Guardar", command=self.save_file)
         self.file_menu.add_command(label="Guardar como", command=self.save_as_file)
+        self.file_menu.add_command(label="Cerrar", command=self.close_file)  # Add close option
         self.file_menu.add_separator()
         self.file_menu.add_command(label="Salir", command=self.root.quit)
 
@@ -349,6 +355,12 @@ class IDE:
             foreground=self.colors['fg_main']
         )
 
+    def on_scroll(self, *args):
+        """Handle scrolling of text area and line numbers"""
+        self.text_area.yview(*args)
+        self.line_numbers.yview(*args)
+        self.update_line_numbers()
+
     def open_file(self):
         """Abre un archivo y carga su contenido en el editor de texto"""
         self.filename = filedialog.askopenfilename(defaultextension=".txt", filetypes=[("Archivos de texto", "*.txt")])
@@ -357,6 +369,7 @@ class IDE:
                 content = file.read()
                 self.text_area.delete(1.0, tk.END)
                 self.text_area.insert(tk.END, content)
+                self.update_line_numbers()  # Add this line
 
     def save_file(self):
         """Guarda el archivo actual"""
@@ -475,6 +488,13 @@ class IDE:
             self.cursor_label.config(text=f"Línea: {line}, Columna: {col}")
         except Exception as e:
             self.cursor_label.config(text="Línea: 1, Columna: 1")
+    
+    def close_file(self):
+        """Cierra el archivo actual y limpia el editor"""
+        if messagebox.askokcancel("Cerrar archivo", "¿Desea cerrar el archivo actual?"):
+            self.text_area.delete(1.0, tk.END)
+            self.filename = None
+            self.update_line_numbers()
 
 if __name__ == "__main__":
     root = tk.Tk()

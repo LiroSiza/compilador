@@ -491,10 +491,34 @@ class IDE:
     
     def close_file(self):
         """Cierra el archivo actual y limpia el editor"""
-        if messagebox.askokcancel("Cerrar archivo", "¿Desea cerrar el archivo actual?"):
-            self.text_area.delete(1.0, tk.END)
-            self.filename = None
-            self.update_line_numbers()
+        if self.has_unsaved_changes():
+            response = messagebox.askyesnocancel(
+                "Guardar cambios",
+                "¿Desea guardar los cambios antes de cerrar?")
+            
+            if response is None:  # Cancel
+                return
+            elif response:  # Yes
+                self.save_file()
+                if not self.filename:  # If save was cancelled
+                    return
+        
+        self.text_area.delete(1.0, tk.END)
+        self.filename = None
+        self.update_line_numbers()
+
+    def has_unsaved_changes(self):
+        """Verifica si hay cambios sin guardar"""
+        if not hasattr(self, 'filename'):
+            return self.text_area.get(1.0, tk.END) != '\n'
+        
+        try:
+            with open(self.filename, 'r') as file:
+                original_content = file.read()
+                current_content = self.text_area.get(1.0, tk.END)
+                return original_content != current_content
+        except:
+            return True
 
 if __name__ == "__main__":
     root = tk.Tk()

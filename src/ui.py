@@ -4,30 +4,275 @@ import subprocess
 
 class IDE:
     def __init__(self, root):
+        # Define color scheme
+        self.colors = {
+            'bg_main': '#1a1a2e',  # Dark navy blue
+            'bg_secondary': '#16213e',  # Slightly lighter navy blue
+            'fg_main': '#ffffff',  # White text
+            'fg_secondary': '#e1e1e1',  # Slightly dimmed white
+            'accent': '#0f3460',  # Accent color for buttons
+            'error_bg': '#2a1f2d',  # Dark red background for errors
+            'result_bg': '#1f2a2d'  # Dark blue-green background for results
+        }
+
+        # Add font configuration
+        self.fonts = {
+            'editor': ('Consolas', 12),  # Modern monospace font for code
+            'line_numbers': ('Consolas', 12),
+            'buttons': ('Segoe UI', 10),
+            'labels': ('Segoe UI', 10),
+            'results': ('Consolas', 11)
+        }
+
         self.root = root
         self.root.title("IDE para Compilador")
-        self.root.geometry("800x600")
+        self.root.geometry("1000x800")
+        self.root.configure(bg=self.colors['bg_main'])
 
-        self.filename = None
+        # Frame principal
+        self.main_frame = tk.Frame(self.root, bg=self.colors['bg_main'])
+        self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        # Crear el área de texto para el editor
-        self.text_area = tk.Text(self.root, wrap=tk.WORD, undo=True, height=20, width=80)
-        self.text_area.pack(padx=10, pady=10)
+        # Frame superior para el editor
+        self.editor_frame = tk.Frame(self.main_frame, bg=self.colors['bg_main'])
+        self.editor_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
+
+        # Frame for editor and line numbers
+        self.editor_with_lines_frame = tk.Frame(self.editor_frame, bg=self.colors['bg_main'])
+        self.editor_with_lines_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Line numbers text widget - adjust width and add proper styling
+        self.line_numbers = tk.Text(self.editor_with_lines_frame, width=4)
+        self.line_numbers.pack(side=tk.LEFT, fill=tk.Y)
+        self.line_numbers.config(
+            bg=self.colors['bg_main'],
+            fg=self.colors['fg_secondary'],
+            font=self.fonts['line_numbers'],
+            padx=5,
+            pady=5,
+            borderwidth=0,
+            highlightthickness=0,
+            spacing1=2,  # Match main editor spacing
+            spacing2=2,
+            spacing3=2
+        )
+
+        # Main text area - ensure consistent spacing
+        self.text_area = tk.Text(self.editor_with_lines_frame, wrap=tk.NONE, undo=True)  # Changed wrap to NONE
+        self.text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.text_area.config(
+            bg=self.colors['bg_secondary'],
+            fg=self.colors['fg_main'],
+            insertbackground=self.colors['fg_main'],
+            selectbackground='#344055',
+            selectforeground=self.colors['fg_main'],
+            font=self.fonts['editor'],
+            padx=5,
+            pady=5,
+            spacing1=2,
+            spacing2=2,
+            spacing3=2
+        )
+
+        # Main editor scrollbar setup - MOVE THIS HERE
+        self.editor_scroll = tk.Scrollbar(self.editor_with_lines_frame)
+        self.editor_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Configure editor scrollbar
+        self.text_area.config(yscrollcommand=self.editor_scroll.set)
+        self.editor_scroll.config(command=self.on_scroll)  # Use on_scroll instead of yview
+
+        # Bind events for updating line numbers and cursor position
+        self.text_area.bind('<Key>', self.update_line_numbers)
+        self.text_area.bind('<KeyRelease>', lambda e: (self.update_line_numbers(), self.update_cursor_position()))
+        self.text_area.bind('<Button-1>', lambda e: (self.update_line_numbers(), self.update_cursor_position()))
+        self.text_area.bind('<ButtonRelease-1>', self.update_cursor_position)
+        self.text_area.bind('<MouseWheel>', self.update_line_numbers)
+        self.text_area.bind('<<Change>>', self.update_line_numbers)
+        self.text_area.bind('<Configure>', self.update_line_numbers)
+        
+        # Add these new bindings
+        self.text_area.bind('<Return>', self.update_line_numbers)
+        self.text_area.bind('<BackSpace>', self.update_line_numbers)
+        self.text_area.bind('<Delete>', self.update_line_numbers)
+
+        # Initial line numbers
+        self.update_line_numbers()
+
+        # Cursor position label - move to bottom and ensure visibility
+        self.cursor_label = tk.Label(self.main_frame, text="Línea: 1, Columna: 1")
+        self.cursor_label.pack(side=tk.BOTTOM, anchor=tk.SE, padx=5, pady=2)
+
+        # Configure line numbers
+        self.line_numbers.tag_configure('line', justify='right')
+        self.line_numbers.config(bg=self.colors['bg_main'], fg=self.colors['fg_secondary'])
+        self.line_numbers.config(state='disabled')
+
+        # Frame inferior para resultados y errores
+        self.output_frame = tk.Frame(self.main_frame, bg=self.colors['bg_main'])
+        self.output_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Crear el área de texto para el editor (70% del alto)
+        # self.text_area = tk.Text(self.editor_frame, wrap=tk.WORD, undo=True)
+        # self.text_area.pack(fill=tk.BOTH, expand=True)
+
+        # Frame para resultados y errores (30% del alto)
+        self.results_errors_frame = tk.Frame(self.output_frame, bg=self.colors['bg_main'])
+        self.results_errors_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Frame para resultados (izquierda)
+        self.results_frame = tk.LabelFrame(self.results_errors_frame, text="Resultados", bg=self.colors['bg_main'], fg=self.colors['fg_main'])
+        self.results_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+
+        # Frame para los botones de resultados
+        self.results_buttons_frame = tk.Frame(self.results_frame, bg=self.colors['bg_main'])
+        self.results_buttons_frame.pack(fill=tk.X, padx=5, pady=2)
+
+        # Botones para cambiar vista de resultados
+        self.btn_lexico = tk.Button(self.results_buttons_frame, text="Léxico", 
+                                  command=lambda: self.show_result("lexico"))
+        self.btn_lexico.pack(side=tk.LEFT, padx=2)
+        
+        self.btn_sintactico = tk.Button(self.results_buttons_frame, text="Sintáctico", 
+                                      command=lambda: self.show_result("sintactico"))
+        self.btn_sintactico.pack(side=tk.LEFT, padx=2)
+        
+        self.btn_semantico = tk.Button(self.results_buttons_frame, text="Semántico", 
+                                     command=lambda: self.show_result("semantico"))
+        self.btn_semantico.pack(side=tk.LEFT, padx=2)
+        
+        self.btn_tabla = tk.Button(self.results_buttons_frame, text="Tabla Hash", 
+                                 command=lambda: self.show_result("tabla"))
+        self.btn_tabla.pack(side=tk.LEFT, padx=2)
+        
+        self.btn_intermedio = tk.Button(self.results_buttons_frame, text="Intermedio", 
+                                      command=lambda: self.show_result("intermedio"))
+        self.btn_intermedio.pack(side=tk.LEFT, padx=2)
+
+        # Área de texto para resultados (después de los botones)
+        self.result_text = tk.Text(self.results_frame, height=10)
+        self.result_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        # Frame para errores (derecha)
+        self.errors_frame = tk.LabelFrame(self.results_errors_frame, text="Errores", bg=self.colors['bg_main'], fg=self.colors['fg_main'])
+        self.errors_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Frame para los botones de errores
+        self.errors_buttons_frame = tk.Frame(self.errors_frame, bg=self.colors['bg_main'])
+        self.errors_buttons_frame.pack(fill=tk.X, padx=5, pady=2)
+
+        # Botones para cambiar vista de errores
+        self.btn_err_lexico = tk.Button(self.errors_buttons_frame, text="Léxico", 
+                                      command=lambda: self.show_error("lexico"))
+        self.btn_err_lexico.pack(side=tk.LEFT, padx=2)
+        
+        self.btn_err_sintactico = tk.Button(self.errors_buttons_frame, text="Sintáctico", 
+                                          command=lambda: self.show_error("sintactico"))
+        self.btn_err_sintactico.pack(side=tk.LEFT, padx=2)
+        
+        self.btn_err_semantico = tk.Button(self.errors_buttons_frame, text="Semántico", 
+                                         command=lambda: self.show_error("semantico"))
+        self.btn_err_semantico.pack(side=tk.LEFT, padx=2)
+        
+        self.btn_err_resultados = tk.Button(self.errors_buttons_frame, text="Resultados", 
+                                          command=lambda: self.show_error("resultados"))
+        self.btn_err_resultados.pack(side=tk.LEFT, padx=2)
+
+        # Área de texto para errores (después de los botones)
+        self.error_text = tk.Text(self.errors_frame, height=10)
+        self.error_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        # Results scrollbar setup
+        self.result_scroll = tk.Scrollbar(self.results_frame)
+        self.result_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.result_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Configure results scrollbar
+        self.result_text.config(yscrollcommand=self.result_scroll.set)
+        self.result_scroll.config(command=self.result_text.yview)
+
+        # Error scrollbar setup
+        self.error_scroll = tk.Scrollbar(self.errors_frame)
+        self.error_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.error_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Configure error scrollbar
+        self.error_text.config(yscrollcommand=self.error_scroll.set)
+        self.error_scroll.config(command=self.error_text.yview)
+
+        # Configurar colores para diferenciar las áreas
+        self.text_area.config(
+            bg=self.colors['bg_secondary'],
+            fg=self.colors['fg_main'],
+            insertbackground=self.colors['fg_main'],  # Cursor color
+            selectbackground='#344055',  # Selection color
+            selectforeground=self.colors['fg_main'],
+            font=self.fonts['editor'],
+            pady=5,
+            padx=5,
+            spacing1=2,  # Space between lines
+            spacing2=2,  # Space between paragraphs
+            spacing3=2   # Space when word-wrapped
+        )
+
+        self.result_text.config(
+            bg=self.colors['result_bg'],
+            fg=self.colors['fg_main']
+        )
+
+        self.error_text.config(
+            bg=self.colors['error_bg'],
+            fg=self.colors['fg_main']
+        )
+
+        # Update line numbers configuration
+        self.line_numbers.config(
+            bg=self.colors['bg_main'],
+            fg=self.colors['fg_secondary'],
+            font=self.fonts['line_numbers'],
+            pady=5,
+            padx=5,
+            borderwidth=0,
+            highlightthickness=0
+        )
+
+        # Update result and error text areas
+        for text_widget in [self.result_text, self.error_text]:
+            text_widget.config(
+                font=self.fonts['results'],
+                pady=5,
+                padx=5,
+                spacing1=2,
+                spacing2=2,
+                spacing3=2,
+                borderwidth=0,
+                highlightthickness=1,
+                highlightbackground=self.colors['accent']
+            )
+
+        # Make error and result text readonly
+        self.result_text.config(state='disabled')
+        self.error_text.config(state='disabled')
+
+        # Añadir frame para botones
+        self.button_frame = tk.Frame(self.root, bg=self.colors['bg_main'])
+        self.button_frame.pack(padx=10, pady=5)
 
         # Barra de menús
-        self.menu_bar = tk.Menu(self.root)
+        self.menu_bar = tk.Menu(self.root, bg=self.colors['bg_main'], fg=self.colors['fg_main'])
         self.root.config(menu=self.menu_bar)
 
-        # Menú de archivo
+        # Menú de archivo (dropdown)
         self.file_menu = tk.Menu(self.menu_bar, tearoff=0)
         self.menu_bar.add_cascade(label="Archivo", menu=self.file_menu)
         self.file_menu.add_command(label="Abrir", command=self.open_file)
         self.file_menu.add_command(label="Guardar", command=self.save_file)
         self.file_menu.add_command(label="Guardar como", command=self.save_as_file)
+        self.file_menu.add_command(label="Cerrar", command=self.close_file)  # Add close option
         self.file_menu.add_separator()
         self.file_menu.add_command(label="Salir", command=self.root.quit)
 
-        # Menú de compilación
+        # Menú de compilación (dropdown)
         self.compile_menu = tk.Menu(self.menu_bar, tearoff=0)
         self.menu_bar.add_cascade(label="Compilar", menu=self.compile_menu)
         self.compile_menu.add_command(label="Análisis Léxico", command=self.lexical_analysis)
@@ -36,12 +281,85 @@ class IDE:
         self.compile_menu.add_command(label="Código Intermedio", command=self.intermediate_code)
         self.compile_menu.add_command(label="Ejecutar", command=self.execute_code)
 
-        # Area de resultados
-        self.result_frame = tk.Frame(self.root)
-        self.result_frame.pack(padx=10, pady=10)
+        # Botones directos en la barra de menú
+        self.menu_bar.add_command(label="Léxico", command=self.lexical_analysis)
+        self.menu_bar.add_command(label="Sintáctico", command=self.syntax_analysis)
+        self.menu_bar.add_command(label="Semántico", command=self.semantic_analysis)
+        self.menu_bar.add_command(label="Intermedio", command=self.intermediate_code)
+        self.menu_bar.add_command(label="Ejecutar", command=self.execute_code)
 
-        self.result_text = tk.Text(self.result_frame, height=10, width=80)
-        self.result_text.pack()
+        # Configure button style
+        button_style = {
+            'bg': self.colors['accent'],
+            'fg': self.colors['fg_main'],
+            'activebackground': self.colors['bg_secondary'],
+            'activeforeground': self.colors['fg_main'],
+            'font': self.fonts['buttons'],
+            'relief': 'flat',
+            'borderwidth': 0,
+            'highlightthickness': 0,
+            'pady': 3,
+            'padx': 10,
+            'cursor': 'hand2'
+        }
+
+        # Apply style to all buttons
+        all_buttons = [
+            self.btn_lexico, self.btn_sintactico, self.btn_semantico, 
+            self.btn_tabla, self.btn_intermedio, self.btn_err_lexico, 
+            self.btn_err_sintactico, self.btn_err_semantico, 
+            self.btn_err_resultados  # Removed btn_err_intermedio from this list
+        ]
+        
+        for btn in all_buttons:
+            btn.configure(**button_style)
+
+        # Configure menu item colors
+        menu_config = {
+            'activebackground': self.colors['accent'],
+            'activeforeground': self.colors['fg_main'],
+            'background': self.colors['bg_secondary'],
+            'foreground': self.colors['fg_main']
+        }
+        
+        self.file_menu.configure(**menu_config)
+        self.compile_menu.configure(**menu_config)
+
+        # Update menu configuration
+        menu_config.update({
+            'font': self.fonts['buttons']
+        })
+
+        # Update scrollbar colors
+        scrollbar_style = {
+            'bg': self.colors['bg_secondary'],
+            'troughcolor': self.colors['bg_main'],
+            'activebackground': self.colors['accent']
+        }
+        
+        self.editor_scroll.configure(**scrollbar_style)
+        self.result_scroll.configure(**scrollbar_style)
+        self.error_scroll.configure(**scrollbar_style)
+
+        # Configure cursor label
+        self.cursor_label.configure(
+            bg=self.colors['bg_main'],
+            fg=self.colors['fg_secondary'],
+            font=self.fonts['labels'],
+            pady=5
+        )
+
+        # Add highlight colors for text selection
+        self.text_area.tag_configure("sel", 
+            background="#344055", 
+            foreground=self.colors['fg_main']
+        )
+
+    def on_scroll(self, *args):
+        """Handle scrolling of text area and line numbers"""
+        self.text_area.yview(*args)
+        self.line_numbers.yview(*args)
+        self.update_line_numbers()
 
     def open_file(self):
         """Abre un archivo y carga su contenido en el editor de texto"""
@@ -51,6 +369,7 @@ class IDE:
                 content = file.read()
                 self.text_area.delete(1.0, tk.END)
                 self.text_area.insert(tk.END, content)
+                self.update_line_numbers()  # Add this line
 
     def save_file(self):
         """Guarda el archivo actual"""
@@ -67,34 +386,139 @@ class IDE:
         if self.filename:
             self.save_file()
 
-    def lexical_analysis(self):
-        """Simula el análisis léxico llamando al compilador (se puede usar subprocess para ejecutar otro script)"""
+    def update_result(self, text):
+        """Update the result text area"""
+        self.result_text.config(state='normal')
         self.result_text.delete(1.0, tk.END)
+        self.result_text.insert(tk.END, text)
+        self.result_text.config(state='disabled')
+
+    def update_error(self, text):
+        """Update the error text area"""
+        self.error_text.config(state='normal')
+        self.error_text.delete(1.0, tk.END)
+        self.error_text.insert(tk.END, text)
+        self.error_text.config(state='disabled')
+
+    def lexical_analysis(self):
+        """Simula el análisis léxico"""
         code = self.text_area.get(1.0, tk.END)
-        # Aquí realizarías el análisis léxico
-        # Por ejemplo, podrías llamar a un script de Python que realice el análisis léxico
-        # subprocess.run(["python", "lexical_analyzer.py", code])
-        self.result_text.insert(tk.END, "Análisis léxico realizado...\n")
+        self.update_result("Análisis léxico realizado...\n")
+        self.update_error("No se encontraron errores léxicos\n")
 
     def syntax_analysis(self):
         """Simula el análisis sintáctico"""
-        self.result_text.delete(1.0, tk.END)
-        self.result_text.insert(tk.END, "Análisis sintáctico realizado...\n")
+        self.update_result("Análisis sintáctico realizado...\n")
+        self.update_error("No se encontraron errores sintácticos\n")
 
     def semantic_analysis(self):
         """Simula el análisis semántico"""
-        self.result_text.delete(1.0, tk.END)
-        self.result_text.insert(tk.END, "Análisis semántico realizado...\n")
+        self.update_result("Análisis semántico realizado...\n")
+        self.update_error("No se encontraron errores semánticos\n")
 
     def intermediate_code(self):
         """Simula la generación de código intermedio"""
-        self.result_text.delete(1.0, tk.END)
-        self.result_text.insert(tk.END, "Generación de código intermedio...\n")
+        self.update_result("Generación de código intermedio...\n")
+        self.update_error("No se encontraron errores en la generación de código intermedio\n")
 
     def execute_code(self):
         """Simula la ejecución del código"""
-        self.result_text.delete(1.0, tk.END)
-        self.result_text.insert(tk.END, "Ejecutando el código...\n")
+        self.update_result("Ejecutando el código...\n")
+        self.update_error("No se encontraron errores en la ejecución del código\n")
+    
+    def show_result(self, result_type):
+        """Muestra el resultado correspondiente al botón presionado"""
+        results = {
+            "lexico": "Resultados del análisis léxico:\n",
+            "sintactico": "Resultados del análisis sintáctico:\n",
+            "semantico": "Resultados del análisis semántico:\n",
+            "tabla": "Tabla de símbolos:\n",
+            "intermedio": "Código intermedio generado:\n"
+        }
+        
+        self.update_result(results.get(result_type, "Seleccione un tipo de resultado"))
+
+    def show_error(self, error_type):
+        """Muestra los errores correspondientes al botón presionado"""
+        errors = {
+            "lexico": "Errores del análisis léxico:\n",
+            "sintactico": "Errores del análisis sintáctico:\n",
+            "semantico": "Errores del análisis semántico:\n",
+            "resultados": "Errores en los resultados:\n"
+        }
+        
+        self.update_error(errors.get(error_type, "Seleccione un tipo de error"))
+
+    def update_line_numbers(self, event=None):
+        """Update line numbers"""
+        self.line_numbers.config(state='normal')
+        self.line_numbers.delete('1.0', tk.END)
+        
+        # Get text content and count lines
+        text_content = self.text_area.get('1.0', tk.END)
+        
+        # Handle empty text area
+        if len(text_content) <= 1:  # Just contains '\n'
+            self.line_numbers.insert('1.0', '  1')
+            self.line_numbers.config(state='disabled')
+            return
+        
+        # Count lines
+        num_lines = text_content.count('\n')
+        if not text_content.endswith('\n'):  # Fix: changed endsWith to endswith
+            num_lines += 1
+        
+        # Create line numbers with padding
+        line_numbers_text = '\n'.join(str(i).rjust(3) for i in range(1, num_lines + 1))
+        
+        # Insert line numbers
+        self.line_numbers.insert('1.0', line_numbers_text)
+        
+        # Sync scrolling
+        self.line_numbers.yview_moveto(self.text_area.yview()[0])
+        self.line_numbers.config(state='disabled')
+
+    def update_cursor_position(self, event=None):
+        """Update cursor position indicator"""
+        try:
+            position = self.text_area.index(tk.INSERT)
+            line, col = position.split('.')
+            # Adjust column to be 1-based instead of 0-based
+            col = str(int(col) + 1)
+            self.cursor_label.config(text=f"Línea: {line}, Columna: {col}")
+        except Exception as e:
+            self.cursor_label.config(text="Línea: 1, Columna: 1")
+    
+    def close_file(self):
+        """Cierra el archivo actual y limpia el editor"""
+        if self.has_unsaved_changes():
+            response = messagebox.askyesnocancel(
+                "Guardar cambios",
+                "¿Desea guardar los cambios antes de cerrar?")
+            
+            if response is None:  # Cancel
+                return
+            elif response:  # Yes
+                self.save_file()
+                if not self.filename:  # If save was cancelled
+                    return
+        
+        self.text_area.delete(1.0, tk.END)
+        self.filename = None
+        self.update_line_numbers()
+
+    def has_unsaved_changes(self):
+        """Verifica si hay cambios sin guardar"""
+        if not hasattr(self, 'filename'):
+            return self.text_area.get(1.0, tk.END) != '\n'
+        
+        try:
+            with open(self.filename, 'r') as file:
+                original_content = file.read()
+                current_content = self.text_area.get(1.0, tk.END)
+                return original_content != current_content
+        except:
+            return True
 
 if __name__ == "__main__":
     root = tk.Tk()

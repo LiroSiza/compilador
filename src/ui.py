@@ -33,6 +33,61 @@ class IDE:
         self.main_frame = tk.Frame(self.root, bg=self.colors['bg_main'])
         self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
+        # Toolbar frame
+        self.toolbar_frame = tk.Frame(self.main_frame, bg=self.colors['bg_main'])
+        self.toolbar_frame.pack(fill=tk.X, pady=(0, 5))
+
+        # Load and resize toolbar icons
+        try:
+            def load_and_resize_icon(path, size=(16, 16)):
+                img = tk.PhotoImage(file=path)
+                # Create a temporary canvas to resize the image
+                canvas = tk.Canvas(width=size[0], height=size[1])
+                canvas.image = img  # Keep a reference
+                return img.subsample(max(1, img.width() // size[0]), max(1, img.height() // size[1]))
+
+            self.new_icon = load_and_resize_icon("assets/new-document.png")
+            self.open_icon = load_and_resize_icon("assets/open-file.png")
+            self.save_icon = load_and_resize_icon("assets/save.png")
+        except tk.TclError:
+            print("Warning: Could not load toolbar icons")
+            self.new_icon = None
+            self.open_icon = None
+            self.save_icon = None
+
+        # Create toolbar buttons
+        toolbar_button_style = {
+            'bg': self.colors['bg_main'],
+            'activebackground': self.colors['accent'],
+            'bd': 0,
+            'padx': 5,
+            'pady': 5,
+            'cursor': 'hand2',
+            'width': 24,  # Fixed width for buttons
+            'height': 24  # Fixed height for buttons
+        }
+
+        self.btn_new = tk.Button(self.toolbar_frame, 
+                                image=self.new_icon if self.new_icon else None,
+                                text="" if self.new_icon else "New",
+                                command=self.new_file,
+                                **toolbar_button_style)
+        self.btn_new.pack(side=tk.LEFT, padx=2)
+
+        self.btn_open = tk.Button(self.toolbar_frame, 
+                                 image=self.open_icon if self.open_icon else None,
+                                 text="" if self.open_icon else "Open",
+                                 command=self.open_file,
+                                 **toolbar_button_style)
+        self.btn_open.pack(side=tk.LEFT, padx=2)
+
+        self.btn_save = tk.Button(self.toolbar_frame, 
+                                 image=self.save_icon if self.save_icon else None,
+                                 text="" if self.save_icon else "Save",
+                                 command=self.save_file,
+                                 **toolbar_button_style)
+        self.btn_save.pack(side=tk.LEFT, padx=2)
+
         # Frame superior para el editor
         self.editor_frame = tk.Frame(self.main_frame, bg=self.colors['bg_main'])
         self.editor_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
@@ -519,6 +574,24 @@ class IDE:
                 return original_content != current_content
         except:
             return True
+    def new_file(self):
+        """Creates a new empty file"""
+        if hasattr(self, 'filename') and self.has_unsaved_changes():
+            response = messagebox.askyesnocancel(
+                "Guardar cambios",
+                "¿Desea guardar los cambios antes de crear un nuevo archivo?")
+            
+            if response is None:  # Cancel
+                return
+            elif response:  # Yes
+                self.save_file()
+                if not self.filename:  # If save was cancelled
+                    return
+        
+        self.text_area.delete(1.0, tk.END)
+        self.filename = None
+        self.update_line_numbers()
+        self.update_cursor_position()
 
 if __name__ == "__main__":
     root = tk.Tk()

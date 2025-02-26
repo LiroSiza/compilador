@@ -5,7 +5,7 @@ Compilador
 
 1. Clone the repository (if using Git):
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/LiroSiza/compilador
    cd compilador
    ```
 

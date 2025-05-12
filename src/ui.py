@@ -1,9 +1,19 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import subprocess
+import sys
+import os
+
+# Add the src directory to the path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# Now import Lexer
+from lexer import Lexer
 
 class IDE:
     def __init__(self, root):
+        self.last_analysis_text = ""
+        self._syntax_highlight_after = None
         # Define color scheme
         self.colors = {
             'bg_main': '#1a1a2e',  # Dark navy blue
@@ -205,7 +215,8 @@ class IDE:
         self.btn_intermedio.pack(side=tk.LEFT, padx=2)
 
         # Área de texto para resultados (después de los botones)
-        self.result_text = tk.Text(self.results_frame, height=10)
+        self.result_text = tk.Text(self.results_frame, height=15)  # Increased height from 10 to 15
+
         self.result_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         # Frame para errores (derecha)
@@ -234,8 +245,7 @@ class IDE:
         self.btn_err_resultados.pack(side=tk.LEFT, padx=2)
 
         # Área de texto para errores (después de los botones)
-        self.error_text = tk.Text(self.errors_frame, height=10)
-        self.error_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.error_text = tk.Text(self.errors_frame, height=15)  # Increased height from 10 to 15        self.error_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         # Results scrollbar setup
         self.result_scroll = tk.Scrollbar(self.results_frame)
@@ -456,10 +466,62 @@ class IDE:
         self.error_text.config(state='disabled')
 
     def lexical_analysis(self):
-        """Simula el análisis léxico"""
-        code = self.text_area.get(1.0, tk.END)
-        self.update_result("Análisis léxico realizado...\n")
-        self.update_error("No se encontraron errores léxicos\n")
+        """Performs lexical analysis on the code"""
+        try:
+            code = self.text_area.get(1.0, tk.END)
+            lexer = Lexer()
+            tokens, errors = lexer.tokenize(code)
+            
+            # Store the analyzed text to avoid unnecessary repeated analysis
+            self.last_analysis_text = code
+            
+            # Update result with tokens
+            result_text = "Análisis léxico realizado...\n\n"
+            for token in tokens:
+                result_text += str(token) + "\n"
+            self.update_result(result_text)
+            
+            # Update error with errors
+            if errors:
+                error_text = "Se encontraron errores léxicos:\n\n"
+                for error in errors:
+                    error_text += str(error) + "\n"
+                self.update_error(error_text)
+            else:
+                self.update_error("No se encontraron errores léxicos\n")
+            
+            # Apply syntax highlighting
+            self.apply_syntax_highlighting(tokens)
+        except Exception as e:
+            import traceback
+            error_message = f"Error al realizar el análisis léxico:\n{str(e)}\n\n"
+            error_message += traceback.format_exc()
+            self.update_error(error_message)
+            print(error_message)
+
+    # Add a new method to apply syntax highlighting
+    def apply_syntax_highlighting(self, tokens):
+        """Apply syntax highlighting to the text based on token types"""
+        # First, remove any existing tags
+        for tag in self.text_area.tag_names():
+            if tag != "sel":  # Don't remove selection tag
+                self.text_area.tag_remove(tag, "1.0", tk.END)
+        
+        # Apply highlighting for each token
+        lexer = Lexer()
+        for token in tokens:
+            # Calculate positions
+            start_pos = f"{token.line}.{token.column-1}"
+            end_pos = f"{token.line}.{token.column-1 + len(token.value)}"
+            
+            # Create a tag for this token type if it doesn't exist
+            tag_name = f"token_{token.type}"
+            if tag_name not in self.text_area.tag_names():
+                color = lexer.get_color_for_token_type(token.type)
+                self.text_area.tag_configure(tag_name, foreground=color)
+            
+            # Apply the tag
+            self.text_area.tag_add(tag_name, start_pos, end_pos)
 
     def syntax_analysis(self):
         """Simula el análisis sintáctico"""
@@ -532,6 +594,10 @@ class IDE:
         # Sync scrolling
         self.line_numbers.yview_moveto(self.text_area.yview()[0])
         self.line_numbers.config(state='disabled')
+        if hasattr(self, 'last_analysis_text') and self.last_analysis_text != self.text_area.get(1.0, tk.END):
+            # Only re-run analysis if significant time has passed (to avoid performance issues)
+            self.after_cancel(self._syntax_highlight_after) if hasattr(self, '_syntax_highlight_after') else None
+            self._syntax_highlight_after = self.after(1000, self.lexical_analysis)
 
     def update_cursor_position(self, event=None):
         """Update cursor position indicator"""

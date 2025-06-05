@@ -49,10 +49,11 @@ class Lexer:
             'ERROR': 9         # Errors
         }
         
-        # Define reserved words
+        # Define reserved words (include grammar keywords and boolean literals)
         self.RESERVED_WORDS = {
-            'if', 'else', 'end', 'do', 'while', 'switch', 'case', 
-            'int', 'float', 'main', 'cin', 'cout'
+            'if', 'else', 'end', 'do', 'while', 'then',
+            'switch', 'case', 'int', 'float', 'bool', 'main',
+            'cin', 'cout', 'true', 'false'
         }
         
         # Define patterns

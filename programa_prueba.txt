@@ -1,0 +1,15 @@
+main {
+    int c, x;
+    c = 3;
+    x = c + 1;
+
+    if x > 3 then
+        cout << x;
+    else
+        cout << x;
+    end
+
+    while c < 5
+        c = c + 1;
+    end
+}

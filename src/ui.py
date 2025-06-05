@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Now import Lexer
 from lexer import Lexer
+from parser import Parser
 
 class IDE:
     def __init__(self, root):
@@ -202,7 +203,7 @@ class IDE:
         self.btn_lexico.pack(side=tk.LEFT, padx=2)
         
         self.btn_sintactico = tk.Button(self.results_buttons_frame, text="Sintáctico", 
-                                      command=lambda: self.show_result("sintactico"))
+                                      command=self.syntax_analysis)
         self.btn_sintactico.pack(side=tk.LEFT, padx=2)
         
         self.btn_semantico = tk.Button(self.results_buttons_frame, text="Semántico", 
@@ -494,6 +495,8 @@ class IDE:
             else:
                 self.update_error("No se encontraron errores léxicos\n")
             
+            # Store tokens for syntax analysis
+            self.last_tokens = tokens
             # Apply syntax highlighting
             self.apply_syntax_highlighting(tokens)
         except Exception as e:
@@ -528,9 +531,26 @@ class IDE:
             self.text_area.tag_add(tag_name, start_pos, end_pos)
 
     def syntax_analysis(self):
-        """Simula el análisis sintáctico"""
-        self.update_result("Análisis sintáctico realizado...\n")
-        self.update_error("No se encontraron errores sintácticos\n")
+        """Realiza el análisis sintáctico usando el Parser"""
+        try:
+            # Ensure tokens are available
+            if not hasattr(self, 'last_tokens'):
+                self.lexical_analysis()
+            # Parse tokens
+            parser = Parser(self.last_tokens)
+            errors = parser.parse()
+            # Update results
+            result_text = "Análisis sintáctico realizado...\n\n"
+            self.update_result(result_text)
+            # Update errors
+            if errors:
+                error_text = "Se encontraron errores sintácticos:\n\n" + "\n".join(errors)
+                self.update_error(error_text)
+            else:
+                self.update_error("No se encontraron errores sintácticos\n")
+        except Exception as e:
+            self.update_error(f"Error en análisis sintáctico:\n{str(e)}\n")
+            self.update_result("")
 
     def semantic_analysis(self):
         """Simula el análisis semántico"""

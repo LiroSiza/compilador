@@ -40,8 +40,9 @@ class IDE:
         self.root.configure(bg=self.colors['bg_main'])
 
         # Frame principal
-        self.main_frame = tk.Frame(self.root, bg=self.colors['bg_main'])
+        self.main_frame = tk.PanedWindow(self.root, orient=tk.VERTICAL, bg=self.colors['bg_main'])
         self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
 
         # Toolbar frame
         self.toolbar_frame = tk.Frame(self.main_frame, bg=self.colors['bg_main'])
@@ -100,7 +101,8 @@ class IDE:
 
         # Frame superior para el editor
         self.editor_frame = tk.Frame(self.main_frame, bg=self.colors['bg_main'])
-        self.editor_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
+        self.main_frame.add(self.editor_frame, stretch="always")
+
 
         # Frame for editor and line numbers
         self.editor_with_lines_frame = tk.Frame(self.editor_frame, bg=self.colors['bg_main'])
@@ -175,7 +177,8 @@ class IDE:
 
         # Frame inferior para resultados y errores
         self.output_frame = tk.Frame(self.main_frame, bg=self.colors['bg_main'])
-        self.output_frame.pack(fill=tk.BOTH, expand=True)
+        self.main_frame.add(self.output_frame, stretch="always")
+
 
         # Crear el área de texto para el editor (70% del alto)
         # self.text_area = tk.Text(self.editor_frame, wrap=tk.WORD, undo=True)
@@ -215,7 +218,7 @@ class IDE:
         self.btn_intermedio.pack(side=tk.LEFT, padx=2)
 
         # Área de texto para resultados (después de los botones)
-        self.result_text = tk.Text(self.results_frame, height=15)  # Increased height from 10 to 15
+        self.result_text = tk.Text(self.results_frame)  # Increased height from 10 to 15
 
         self.result_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
@@ -245,7 +248,7 @@ class IDE:
         self.btn_err_resultados.pack(side=tk.LEFT, padx=2)
 
         # Área de texto para errores (después de los botones)
-        self.error_text = tk.Text(self.errors_frame, height=15)  # Increased height from 10 to 15        self.error_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.error_text = tk.Text(self.errors_frame)  # Increased height from 10 to 15        self.error_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         # Results scrollbar setup
         self.result_scroll = tk.Scrollbar(self.results_frame)
@@ -435,6 +438,7 @@ class IDE:
                 self.text_area.delete(1.0, tk.END)
                 self.text_area.insert(tk.END, content)
                 self.update_line_numbers()  # Add this line
+                self.lexical_analysis()
 
     def save_file(self):
         """Guarda el archivo actual"""
@@ -470,7 +474,7 @@ class IDE:
         try:
             code = self.text_area.get(1.0, tk.END)
             lexer = Lexer()
-            tokens, errors = lexer.tokenize(code)
+            tokens, errors = lexer.tokenize(code, save_to_file=True, output_filename="tokens.txt")
             
             # Store the analyzed text to avoid unnecessary repeated analysis
             self.last_analysis_text = code
@@ -596,9 +600,10 @@ class IDE:
         self.line_numbers.config(state='disabled')
         if hasattr(self, 'last_analysis_text') and self.last_analysis_text != self.text_area.get(1.0, tk.END):
             # Only re-run analysis if significant time has passed (to avoid performance issues)
-            self.after_cancel(self._syntax_highlight_after) if hasattr(self, '_syntax_highlight_after') else None
-            self._syntax_highlight_after = self.after(1000, self.lexical_analysis)
-
+            if hasattr(self, '_syntax_highlight_after') and self._syntax_highlight_after:
+                self.root.after_cancel(self._syntax_highlight_after)
+            # Reduce from 1000ms to 300ms for better responsiveness
+            self._syntax_highlight_after = self.root.after(300, self.lexical_analysis)
     def update_cursor_position(self, event=None):
         """Update cursor position indicator"""
         try:

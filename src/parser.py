@@ -194,14 +194,13 @@ class Parser:
         self.match(4, 'end')
 
     def parse_repeticion(self):
-        # do lista_sentencias while expresion
+        # do lista_sentencias until expresion ;
         self.match(4, 'do')
         self.parse_lista_sentencias()
-        self.match(4, 'while')
+        self.match(4, 'until')
         self.parse_expresion()
-        # optional semicolon at end of do-while
-        if self.current() and self.current().type == 7 and self.current().value == ';':
-            self.advance()
+        # require semicolon after until
+        self.match(7, ';')
 
     def parse_sent_in(self):
         # cin >> id ;

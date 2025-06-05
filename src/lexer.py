@@ -51,7 +51,7 @@ class Lexer:
         
         # Define reserved words (include grammar keywords and boolean literals)
         self.RESERVED_WORDS = {
-            'if', 'else', 'end', 'do', 'while', 'then',
+            'if', 'else', 'end', 'do', 'while', 'then', 'until',
             'switch', 'case', 'int', 'float', 'bool', 'main',
             'cin', 'cout', 'true', 'false'
         }

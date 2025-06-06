@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
+from tkinter import ttk
 import subprocess
 import sys
 import os
@@ -195,11 +196,9 @@ class IDE:
 
         # Frame para los botones de resultados
         self.results_buttons_frame = tk.Frame(self.results_frame, bg=self.colors['bg_main'])
-        self.results_buttons_frame.pack(fill=tk.X, padx=5, pady=2)
-
-        # Botones para cambiar vista de resultados
+        self.results_buttons_frame.pack(fill=tk.X, padx=5, pady=2)        # Botones para cambiar vista de resultados
         self.btn_lexico = tk.Button(self.results_buttons_frame, text="Léxico", 
-                                  command=lambda: self.show_result("lexico"))
+                                  command=self.show_lexical_results)
         self.btn_lexico.pack(side=tk.LEFT, padx=2)
         
         self.btn_sintactico = tk.Button(self.results_buttons_frame, text="Sintáctico", 
@@ -216,12 +215,34 @@ class IDE:
         
         self.btn_intermedio = tk.Button(self.results_buttons_frame, text="Intermedio", 
                                       command=lambda: self.show_result("intermedio"))
-        self.btn_intermedio.pack(side=tk.LEFT, padx=2)
-
-        # Área de texto para resultados (después de los botones)
+        self.btn_intermedio.pack(side=tk.LEFT, padx=2)        # Área de texto para resultados (después de los botones)
         self.result_text = tk.Text(self.results_frame)  # Increased height from 10 to 15
 
         self.result_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        # Treeview para el AST (inicialmente oculto)
+        self.ast_tree = ttk.Treeview(self.results_frame)
+        self.ast_tree['columns'] = ('type', 'value', 'line', 'column')
+        self.ast_tree.heading('#0', text='Nodo')
+        self.ast_tree.heading('type', text='Tipo')
+        self.ast_tree.heading('value', text='Valor')
+        self.ast_tree.heading('line', text='Línea')
+        self.ast_tree.heading('column', text='Columna')
+        
+        # Configurar anchos de columna
+        self.ast_tree.column('#0', width=200, minwidth=150)
+        self.ast_tree.column('type', width=150, minwidth=100)
+        self.ast_tree.column('value', width=100, minwidth=80)
+        self.ast_tree.column('line', width=60, minwidth=50)
+        self.ast_tree.column('column', width=60, minwidth=50)
+        
+        # Inicialmente oculto
+        self.ast_tree.pack_forget()
+
+        # Scrollbar para el AST
+        self.ast_scroll = ttk.Scrollbar(self.results_frame, orient=tk.VERTICAL, command=self.ast_tree.yview)
+        self.ast_tree.configure(yscrollcommand=self.ast_scroll.set)
+        self.ast_scroll.pack_forget()
 
         # Frame para errores (derecha)
         self.errors_frame = tk.LabelFrame(self.results_errors_frame, text="Errores", bg=self.colors['bg_main'], fg=self.colors['fg_main'])
@@ -526,31 +547,82 @@ class IDE:
             if tag_name not in self.text_area.tag_names():
                 color = lexer.get_color_for_token_type(token.type)
                 self.text_area.tag_configure(tag_name, foreground=color)
-            
-            # Apply the tag
+              # Apply the tag
             self.text_area.tag_add(tag_name, start_pos, end_pos)
 
     def syntax_analysis(self):
-        """Realiza el análisis sintáctico usando el Parser"""
+        """Realiza el análisis sintáctico usando el Parser y muestra el AST"""
         try:
             # Ensure tokens are available
             if not hasattr(self, 'last_tokens'):
                 self.lexical_analysis()
-            # Parse tokens
+            
+            # Parse tokens and get AST
             parser = Parser(self.last_tokens)
-            errors = parser.parse()
-            # Update results
-            result_text = "Análisis sintáctico realizado...\n\n"
-            self.update_result(result_text)
+            ast_root, errors = parser.parse()
+            
+            # Hide result text and show AST tree
+            self.result_text.pack_forget()
+            
+            # Clear previous AST content
+            for item in self.ast_tree.get_children():
+                self.ast_tree.delete(item)
+            
+            # Show AST tree and scrollbar
+            self.ast_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5, side=tk.LEFT)
+            self.ast_scroll.pack(fill=tk.Y, side=tk.RIGHT)
+            
+            # Populate AST tree
+            if ast_root:
+                self._populate_ast_tree('', ast_root)
+            
             # Update errors
             if errors:
                 error_text = "Se encontraron errores sintácticos:\n\n" + "\n".join(errors)
                 self.update_error(error_text)
             else:
                 self.update_error("No se encontraron errores sintácticos\n")
+                
         except Exception as e:
-            self.update_error(f"Error en análisis sintáctico:\n{str(e)}\n")
-            self.update_result("")
+            import traceback
+            error_message = f"Error en análisis sintáctico:\n{str(e)}\n\n{traceback.format_exc()}"
+            self.update_error(error_message)
+            # Show result text again if there's an error
+            self.ast_tree.pack_forget()
+            self.ast_scroll.pack_forget()
+            self.result_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+            self.update_result("Error en el análisis sintáctico")
+
+    def _populate_ast_tree(self, parent, node):
+        """Populate the AST tree recursively"""
+        if not node:
+            return
+            
+        # Create display text for the node
+        node_text = node.type
+        if hasattr(node, 'value') and node.value is not None:
+            node_text += f" ({node.value})"
+        
+        # Insert the node into the tree
+        item = self.ast_tree.insert(parent, 'end', text=node_text, values=(
+            node.type if hasattr(node, 'type') else '',
+            str(node.value) if hasattr(node, 'value') and node.value is not None else '',
+            str(node.line) if hasattr(node, 'line') and node.line is not None else '',
+            str(node.column) if hasattr(node, 'column') and node.column is not None else ''
+        ))
+        
+        # Add children recursively
+        if hasattr(node, 'children') and node.children:
+            for child in node.children:
+                self._populate_ast_tree(item, child)
+
+    def show_lexical_results(self):
+        """Switch back to showing lexical analysis results"""
+        self.ast_tree.pack_forget()
+        self.ast_scroll.pack_forget()
+        self.result_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        # Re-run lexical analysis to show tokens
+        self.lexical_analysis()
 
     def semantic_analysis(self):
         """Simula el análisis semántico"""

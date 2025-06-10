@@ -587,11 +587,34 @@ class IDE:
             import traceback
             error_message = f"Error en análisis sintáctico:\n{str(e)}\n\n{traceback.format_exc()}"
             self.update_error(error_message)
-            # Show result text again if there's an error
-            self.ast_tree.pack_forget()
+            # Show result text again if there's an error            self.ast_tree.pack_forget()
             self.ast_scroll.pack_forget()
             self.result_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
             self.update_result("Error en el análisis sintáctico")
+
+    def _get_operation_type(self, operator):
+        """Map operators to descriptive names"""
+        operator_map = {
+            '+': 'PLUS',
+            '-': 'MINUS', 
+            '*': 'MULTIPLY',
+            '/': 'DIVIDE',
+            '%': 'MODULO',
+            '^': 'POWER',
+            '=': 'ASSIGN',
+            '==': 'EQUAL',
+            '!=': 'NOT_EQUAL',
+            '<': 'LESS_THAN',
+            '<=': 'LESS_EQUAL',
+            '>': 'GREATER_THAN',
+            '>=': 'GREATER_EQUAL',
+            '&&': 'AND',
+            '||': 'OR',
+            '!': 'NOT',
+            '++': 'INCREMENT',
+            '--': 'DECREMENT'
+        }
+        return operator_map.get(operator, operator)
 
     def _populate_ast_tree(self, parent, node):
         """Populate the AST tree recursively"""
@@ -600,12 +623,25 @@ class IDE:
             
         # Create display text for the node
         node_text = node.type
-        if hasattr(node, 'value') and node.value is not None:
+        
+        # Determine the type to show in the Type column
+        display_type = node.type
+        
+        # For binary operations, show the specific operation type
+        if node.type == "operacion_binaria" and hasattr(node, 'value') and node.value is not None:
+            operation_type = self._get_operation_type(node.value)
+            display_type = operation_type
+            node_text = f"{node.type} ({operation_type})"
+        elif node.type == "operacion_unaria" and hasattr(node, 'value') and node.value is not None:
+            operation_type = self._get_operation_type(node.value)
+            display_type = operation_type
+            node_text = f"{node.type} ({operation_type})"
+        elif hasattr(node, 'value') and node.value is not None:
             node_text += f" ({node.value})"
         
         # Insert the node into the tree
         item = self.ast_tree.insert(parent, 'end', text=node_text, values=(
-            node.type if hasattr(node, 'type') else '',
+            display_type,
             str(node.value) if hasattr(node, 'value') and node.value is not None else '',
             str(node.line) if hasattr(node, 'line') and node.line is not None else '',
             str(node.column) if hasattr(node, 'column') and node.column is not None else ''

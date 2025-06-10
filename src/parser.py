@@ -271,9 +271,11 @@ class Parser:
 
     def parse_post_increment(self):
         """Parse post-increment/decrement statement: id++ ; or id-- ;"""
+        """Transforms a++ into assignment: a = a + 1"""
         # Consume id
         id_tok = self.match(2)
         id_node = IdentifierNode(id_tok.value, id_tok.line, id_tok.column) if id_tok else None
+        
         # Consume ++ or --
         tok = self.current()
         op_value = None
@@ -283,8 +285,66 @@ class Parser:
         else:
             if tok:
                 self.errors.append(f"Se esperaba '++' o '--' en línea {tok.line}, col {tok.column}")
+        
         # Expect semicolon
         self.match(7, ';')
+        
+        # Create assignment node: a = a + 1 (or a = a - 1 for --)
+        if id_node and op_value:
+            # Create a copy of the identifier for the right side of the assignment
+            right_id_node = IdentifierNode(id_node.value, id_node.line, id_node.column)
+            
+            # Create the number node (1)
+            one_node = NumberNode(1, id_node.line, id_node.column)
+            
+            # Determine the operator (+ for ++, - for --)
+            binary_op = '+' if op_value == '++' else '-'
+            
+            # Create binary operation: a + 1 or a - 1
+            binary_expr = BinaryOpNode(binary_op, right_id_node, one_node)
+            
+            # Create assignment: a = (a + 1) or a = (a - 1)
+            return AssignmentNode(id_node, binary_expr)
+        
+        # Fallback if something went wrong
+        return PostIncrementNode(id_node, op_value)
+        """Parse post-increment/decrement statement: id++ ; or id-- ;"""
+        """Transforms a++ into assignment: a = a + 1"""
+        # Consume id
+        id_tok = self.match(2)
+        id_node = IdentifierNode(id_tok.value, id_tok.line, id_tok.column) if id_tok else None
+        
+        # Consume ++ or --
+        tok = self.current()
+        op_value = None
+        if tok and tok.type == 5 and tok.value in ('++','--'):
+            op_value = tok.value
+            self.advance()
+        else:
+            if tok:
+                self.errors.append(f"Se esperaba '++' o '--' en línea {tok.line}, col {tok.column}")
+        
+        # Expect semicolon
+        self.match(7, ';')
+        
+        # Create assignment node: a = a + 1 (or a = a - 1 for --)
+        if id_node and op_value:
+            # Create a copy of the identifier for the right side of the assignment
+            right_id_node = IdentifierNode(id_node.value, id_node.line, id_node.column)
+            
+            # Create the number node (1)
+            one_node = NumberNode(1, id_node.line, id_node.column)
+            
+            # Determine the operator (+ for ++, - for --)
+            binary_op = '+' if op_value == '++' else '-'
+            
+            # Create binary operation: a + 1 or a - 1
+            binary_expr = BinaryOpNode(binary_op, right_id_node, one_node)
+            
+            # Create assignment: a = (a + 1) or a = (a - 1)
+            return AssignmentNode(id_node, binary_expr)
+        
+        # Fallback if something went wrong
         return PostIncrementNode(id_node, op_value)
 
     def parse_asignacion(self):

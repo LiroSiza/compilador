@@ -571,10 +571,11 @@ class IDE:
             # Show AST tree and scrollbar
             self.ast_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5, side=tk.LEFT)
             self.ast_scroll.pack(fill=tk.Y, side=tk.RIGHT)
-            
-            # Populate AST tree
+              # Populate AST tree
             if ast_root:
                 self._populate_ast_tree('', ast_root)
+                # Expand all nodes to show the complete tree structure
+                self._expand_all_nodes()
             
             # Update errors
             if errors:
@@ -646,11 +647,26 @@ class IDE:
             str(node.line) if hasattr(node, 'line') and node.line is not None else '',
             str(node.column) if hasattr(node, 'column') and node.column is not None else ''
         ))
-        
-        # Add children recursively
+          # Add children recursively
         if hasattr(node, 'children') and node.children:
             for child in node.children:
                 self._populate_ast_tree(item, child)
+        
+        # Expand this node to show its children by default
+        self.ast_tree.item(item, open=True)
+
+    def _expand_all_nodes(self):
+        """Expand all nodes in the tree to show the complete structure"""
+        def expand_node(item):
+            self.ast_tree.item(item, open=True)
+            children = self.ast_tree.get_children(item)
+            for child in children:
+                expand_node(child)
+        
+        # Expand all root nodes
+        root_items = self.ast_tree.get_children()
+        for item in root_items:
+            expand_node(item)
 
     def show_lexical_results(self):
         """Switch back to showing lexical analysis results"""

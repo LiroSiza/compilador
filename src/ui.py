@@ -108,9 +108,7 @@ class IDE:
 
         # Frame for editor and line numbers
         self.editor_with_lines_frame = tk.Frame(self.editor_frame, bg=self.colors['bg_main'])
-        self.editor_with_lines_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        # Line numbers text widget - adjust width and add proper styling
+        self.editor_with_lines_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)        # Line numbers text widget - adjust width and add proper styling
         self.line_numbers = tk.Text(self.editor_with_lines_frame, width=4)
         self.line_numbers.pack(side=tk.LEFT, fill=tk.Y)
         self.line_numbers.config(
@@ -121,9 +119,12 @@ class IDE:
             pady=5,
             borderwidth=0,
             highlightthickness=0,
-            spacing1=2,  # Match main editor spacing
+            spacing1=2,  # Match main editor spacing exactly
             spacing2=2,
-            spacing3=2
+            spacing3=2,
+            wrap=tk.NONE,  # Match text area wrap setting
+            state=tk.DISABLED,  # Make read-only
+            cursor="arrow"  # Change cursor to indicate read-only
         )
 
         # Main text area - ensure consistent spacing
@@ -715,38 +716,33 @@ class IDE:
         self.update_error(errors.get(error_type, "Seleccione un tipo de error"))
 
     def update_line_numbers(self, event=None):
-        """Update line numbers"""
+        """Update line numbers with proper alignment"""
         self.line_numbers.config(state='normal')
         self.line_numbers.delete('1.0', tk.END)
         
-        # Get text content and count lines
-        text_content = self.text_area.get('1.0', tk.END)
+        # Get text content from the text area (excluding the final newline that tkinter adds)
+        text_content = self.text_area.get('1.0', 'end-1c')
         
         # Handle empty text area
-        if len(text_content) <= 1:  # Just contains '\n'
+        if not text_content:
             self.line_numbers.insert('1.0', '  1')
-            self.line_numbers.config(state='disabled')
-            return
+        else:
+            # Split by lines to get accurate count
+            lines = text_content.split('\n')
+            num_lines = len(lines)
+            
+            # Create line numbers with proper padding (right-aligned in 3 characters)
+            line_numbers_text = '\n'.join(str(i).rjust(3) for i in range(1, num_lines + 1))
+            self.line_numbers.insert('1.0', line_numbers_text)
         
-        # Count lines
-        num_lines = text_content.count('\n')
-        if not text_content.endswith('\n'):  # Fix: changed endsWith to endswith
-            num_lines += 1
-        
-        # Create line numbers with padding
-        line_numbers_text = '\n'.join(str(i).rjust(3) for i in range(1, num_lines + 1))
-        
-        # Insert line numbers
-        self.line_numbers.insert('1.0', line_numbers_text)
-        
-        # Sync scrolling
+        # Ensure both widgets have the same view
         self.line_numbers.yview_moveto(self.text_area.yview()[0])
         self.line_numbers.config(state='disabled')
+        
+        # Schedule syntax highlighting if content changed
         if hasattr(self, 'last_analysis_text') and self.last_analysis_text != self.text_area.get(1.0, tk.END):
-            # Only re-run analysis if significant time has passed (to avoid performance issues)
             if hasattr(self, '_syntax_highlight_after') and self._syntax_highlight_after:
                 self.root.after_cancel(self._syntax_highlight_after)
-            # Reduce from 1000ms to 300ms for better responsiveness
             self._syntax_highlight_after = self.root.after(300, self.lexical_analysis)
     def update_cursor_position(self, event=None):
         """Update cursor position indicator"""

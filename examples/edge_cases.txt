@@ -1,0 +1,66 @@
+// Edge case test program
+// This tests various edge cases and unusual constructs in the language
+
+main {
+    int a, b, c;
+    float x;
+    bool flag;
+    
+    // Empty statements
+    ;
+    ;;;
+    
+    // Multiple declarations on one line
+    int i, j, k;
+    
+    // Unusual spacing and formatting
+    a=10;b=20;
+    c = a +b*2;
+    
+    // Zero and negative values
+    a = 0;
+    b = -5;
+    c = -a + -b;
+    
+    // Very large/small values
+    a = 10000;
+    x = 0.00001;
+    
+    // Complex expressions with many operators
+    x = 1.5 * 2.5 / 0.5 + 10.0 - 5.0 * (2.0 + 3.0);
+    a = (((5 + 3) * 2) / 4) ^ 2;
+    
+    // Empty conditionals
+    if true then
+    end
+    
+    // Empty loops
+    while false
+    end
+    
+    do
+    until true;
+    
+    // Nested empty structures
+    if a > b then
+        if a > c then
+        else
+        end
+    end
+    
+    // Multiple increments
+    a++;
+    a++;
+    a++;
+    
+    b--;
+    b--;
+    
+    // Unusual boolean expressions
+    flag = true && true || false && true;
+    
+    // Many levels of nesting in expressions
+    a = 1 + (2 * (3 + (4 * (5 + 6))));
+    
+    cout << a;
+}

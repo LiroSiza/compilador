@@ -1,0 +1,30 @@
+// ERRORES DE ESTRUCTURA DEL PROGRAMA
+// Este archivo contiene errores relacionados con la estructura general del programa
+
+// ERROR 1: Falta llave de apertura
+main 
+    int x;
+    x = 10;
+}
+
+// ERROR 2: Llave de cierre faltante
+main {
+    int x;
+    x = 10;
+
+// ERROR 3: Estructura main faltante
+{
+    int x;
+    x = 10;
+}
+
+// ERROR 4: Múltiples estructuras main
+main {
+    int x;
+    x = 10;
+}
+
+main {
+    int y;
+    y = 20;
+}

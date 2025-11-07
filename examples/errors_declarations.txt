@@ -1,0 +1,38 @@
+// ERRORES EN DECLARACIONES
+// Este archivo contiene errores relacionados con declaraciones de variables
+
+// ERROR 1: Falta punto y coma al final de una declaración
+main {
+    int x
+    x = 10;
+}
+
+// ERROR 2: Tipo de dato inválido
+main {
+    string name;
+    name = "John";
+}
+
+// ERROR 3: Declaración de variable incompleta
+main {
+    int;
+    x = 10;
+}
+
+// ERROR 4: Declaración de variable después de sentencias
+main {
+    int x;
+    x = 10;
+    int y;  // Error: declaración después de sentencias
+}
+
+// ERROR 5: Doble declaración en la misma línea
+main {
+    int x; int y;  // Error: formato inadecuado
+}
+
+// ERROR 6: Declaración con identificadores inválidos
+main {
+    int 123x;  // Error: identificador inválido
+    int y;
+}

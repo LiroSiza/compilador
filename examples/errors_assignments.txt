@@ -1,0 +1,36 @@
+// ERRORES EN SENTENCIAS
+// Este archivo contiene errores relacionados con sentencias y asignaciones
+
+// ERROR 1: Falta punto y coma al final de una asignación
+main {
+    int x;
+    x = 10
+}
+
+// ERROR 2: Operador de asignación incorrecto
+main {
+    int x;
+    x := 10;  // Error: operador de asignación incorrecto
+}
+
+// ERROR 3: Identificador no declarado (error semántico, pero detectable)
+main {
+    y = 10;  // Error: variable no declarada
+}
+
+// ERROR 4: Asignación sin valor derecho
+main {
+    int x;
+    x =;  // Error: falta expresión después del =
+}
+
+// ERROR 5: Asignación sin identificador izquierdo
+main {
+    int x;
+    = 10;  // Error: falta identificador antes del =
+}
+
+// ERROR 6: Asignación a literal
+main {
+    5 = 10;  // Error: no se puede asignar a un literal
+}

@@ -1,0 +1,46 @@
+// Test program for loops and increments
+// This will verify while loops, do-until loops, and post-increments
+
+main {
+    int i, sum, factorial;
+    
+    // Test post-increment operations
+    i = 1;
+    i++;        // Should transform to i = i + 1
+    cout << i;  // Should display 2
+    
+    i--;        // Should transform to i = i - 1
+    cout << i;  // Should display 1
+    
+    // Simple while loop
+    i = 1;
+    sum = 0;
+    while i <= 5
+        sum = sum + i;
+        i++;
+    end
+    cout << sum;  // Should display 15 (1+2+3+4+5)
+    
+    // Do-until loop to calculate factorial
+    i = 5;
+    factorial = 1;
+    do
+        factorial = factorial * i;
+        i--;
+    until i == 0;
+    cout << factorial;  // Should display 120 (5!)
+    
+    // Nested loops
+    i = 1;
+    sum = 0;
+    while i <= 3
+        int j;
+        j = 1;
+        while j <= i
+            sum = sum + j;
+            j++;
+        end
+        i++;
+    end
+    cout << sum;  // Should display 10 (1 + 1+2 + 1+2+3)
+}

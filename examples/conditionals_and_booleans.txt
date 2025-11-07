@@ -1,0 +1,57 @@
+// Test program for conditional structures and boolean operations
+// This will verify if-else, logical operators, and boolean conditions
+
+main {
+    int a, b, c;
+    bool result, flag1, flag2;
+    
+    a = 10;
+    b = 5;
+    c = 15;
+    
+    flag1 = true;
+    flag2 = false;
+    
+    // Simple if statement
+    if a > b then
+        cout << a;
+    end
+    
+    // If-else statement
+    if a < b then
+        cout << b;
+    else
+        cout << a;
+    end
+    
+    // Nested if statements
+    if a > b then
+        if b < c then
+            cout << c;
+        else
+            cout << b;
+        end
+    else
+        cout << a;
+    end
+    
+    // Logical operators
+    if a > b && b < c then
+        result = true;
+    else
+        result = false;
+    end
+    
+    // More complex condition
+    if (a > b || b > c) && flag1 then
+        result = true;
+    else
+        result = false;
+    end
+    
+    // Boolean operations with variables
+    result = flag1 && flag2;  // Should be false
+    result = flag1 || flag2;  // Should be true
+    
+    cout << result;
+}

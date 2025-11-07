@@ -1,0 +1,62 @@
+// ERRORES EN ESTRUCTURAS DE CONTROL
+// Este archivo contiene errores relacionados con if, while y do-until
+
+// ERROR 1: Falta el 'then' en una estructura if
+main {
+    int x;
+    x = 10;
+    if x > 5  // Error: falta 'then'
+        x = x + 1;
+    end
+}
+
+// ERROR 2: Falta el 'end' al final de una estructura if
+main {
+    int x;
+    x = 10;
+    if x > 5 then
+        x = x + 1;
+    // Error: falta 'end'
+}
+
+// ERROR 3: Falta el 'end' al final de una estructura while
+main {
+    int x;
+    x = 0;
+    while x < 10
+        x = x + 1;
+    // Error: falta 'end'
+}
+
+// ERROR 4: Falta el 'until' en una estructura do-until
+main {
+    int x;
+    x = 10;
+    do
+        x = x - 1;
+    x == 0;  // Error: falta 'until'
+}
+
+// ERROR 5: Estructura if sin condición
+main {
+    if then  // Error: falta condición
+        int x;
+        x = 10;
+    end
+}
+
+// ERROR 6: Estructura while sin condición
+main {
+    while  // Error: falta condición
+        int x;
+        x = 10;
+    end
+}
+
+// ERROR 7: Condición faltante en do-until
+main {
+    do
+        int x;
+        x = 10;
+    until;  // Error: falta condición
+}

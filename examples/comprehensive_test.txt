@@ -1,0 +1,71 @@
+// Comprehensive test program with multiple features
+// This tests all language constructs together in a realistic program
+
+main {
+    int i, n, result;
+    float average, sum;
+    bool isPrime, continue;
+    
+    // Get user input
+    cout << 42;  // Display a welcome message code
+    cin >> n;    // Read a value for n
+    
+    // Check if n is prime
+    if n <= 1 then
+        isPrime = false;
+    else
+        isPrime = true;
+        i = 2;
+        while i * i <= n
+            if n % i == 0 then
+                isPrime = false;
+            end
+            i++;
+        end
+    end
+    
+    // Display result of prime check
+    if isPrime then
+        cout << 1;  // 1 means prime
+    else
+        cout << 0;  // 0 means not prime
+    end
+    
+    // Calculate sum and average of numbers from 1 to n
+    sum = 0.0;
+    i = 1;
+    while i <= n
+        sum = sum + i;
+        i++;
+    end
+    average = sum / n;
+    
+    // Output the result
+    cout << sum;
+    cout << average;
+    
+    // Factorial calculation with do-until
+    result = 1;
+    i = n;
+    do
+        result = result * i;
+        i--;
+    until i == 0;
+    
+    cout << result;
+    
+    // Fibonacci sequence up to n terms
+    int a, b, temp;
+    a = 0;
+    b = 1;
+    
+    i = 0;
+    while i < n
+        cout << b;
+        temp = a + b;
+        a = b;
+        b = temp;
+        i++;
+    end
+}
+

@@ -1,0 +1,36 @@
+// Test program for input/output operations
+// This will verify cin and cout functionality
+
+main {
+    int age;
+    float height;
+    bool isStudent;
+    
+    // Simple output
+    cout << 10;
+    cout << 3.14;
+    
+    // Output with variables
+    age = 25;
+    height = 1.75;
+    
+    cout << age;
+    cout << height;
+    
+    // Input
+    cin >> age;
+    cout << age;
+    
+    cin >> height;
+    cout << height;
+    
+    // Input and output in sequence
+    cout << 42;
+    cin >> age;
+    cout << age;
+    
+    // Input and processing
+    cin >> age;
+    age++;
+    cout << age;  // Should show input value + 1
+}

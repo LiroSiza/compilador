@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Now import Lexer
 from lexer import Lexer
 from parser import Parser
+from semantic_analyzer import SemanticAnalyzer
 
 class IDE:
     def __init__(self, root):
@@ -562,6 +563,9 @@ class IDE:
             parser = Parser(self.last_tokens)
             ast_root, errors = parser.parse()
             
+            # Store AST for semantic analysis
+            self.last_ast = ast_root
+            
             # Hide result text and show AST tree
             self.result_text.pack_forget()
             
@@ -594,29 +598,45 @@ class IDE:
             self.result_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
             self.update_result("Error en el análisis sintáctico")
 
-    def _get_operation_type(self, operator):
-        """Map operators to descriptive names"""
-        operator_map = {
-            '+': 'PLUS',
-            '-': 'MINUS', 
-            '*': 'MULTIPLY',
-            '/': 'DIVIDE',
-            '%': 'MODULO',
-            '^': 'POWER',
-            '=': 'ASSIGN',
-            '==': 'EQUAL',
-            '!=': 'NOT_EQUAL',
-            '<': 'LESS_THAN',
-            '<=': 'LESS_EQUAL',
-            '>': 'GREATER_THAN',
-            '>=': 'GREATER_EQUAL',
-            '&&': 'AND',
-            '||': 'OR',
-            '!': 'NOT',
-            '++': 'INCREMENT',
-            '--': 'DECREMENT'
-        }
-        return operator_map.get(operator, operator)
+    def _populate_annotated_ast_tree(self, parent, node):
+        """Populate the AST tree with annotated nodes"""
+        if not node:
+            return
+
+        # Get display text for the node
+        node_text = self._get_node_display_text(node)
+        
+        # Get semantic type if available
+        semantic_type = getattr(node, 'semantic_type', '')
+        
+        # Create tree item
+        item = self.ast_tree.insert(parent, 'end', text=node_text, 
+                                  values=(semantic_type, node.line or '', node.column or ''))
+        
+        # Recursively add children
+        for child in node.children:
+            self._populate_annotated_ast_tree(item, child)
+
+    def _get_node_display_text(self, node):
+        """Get display text for AST node"""
+        if hasattr(node, 'type'):
+            node_type = node.type
+        else:
+            node_type = str(type(node).__name__)
+            
+        if hasattr(node, 'value') and node.value is not None:
+            # Convert operators to readable names
+            if node_type in ['operacion_binaria', 'BinaryOpNode'] and node.value:
+                op_names = {
+                    '+': 'PLUS', '-': 'MINUS', '*': 'MULTIPLY', '/': 'DIVIDE',
+                    '%': 'MODULO', '^': 'POWER', '==': 'EQUAL', '!=': 'NOT_EQUAL',
+                    '<': 'LESS', '<=': 'LESS_EQUAL', '>': 'GREATER', '>=': 'GREATER_EQUAL',
+                    '&&': 'AND', '||': 'OR'
+                }
+                display_value = op_names.get(node.value, node.value)
+                return f"{node_type}({display_value})"
+            return f"{node_type}({node.value})"
+        return node_type
 
     def _populate_ast_tree(self, parent, node):
         """Populate the AST tree recursively"""
@@ -656,6 +676,30 @@ class IDE:
         # Expand this node to show its children by default
         self.ast_tree.item(item, open=True)
 
+    def _get_operation_type(self, operator):
+        """Convert operator symbols to descriptive names"""
+        operator_map = {
+            '+': 'PLUS',
+            '-': 'MINUS', 
+            '*': 'MULTIPLY',
+            '/': 'DIVIDE',
+            '%': 'MODULO',
+            '^': 'POWER',
+            '=': 'ASSIGN',
+            '==': 'EQUAL',
+            '!=': 'NOT_EQUAL',
+            '<': 'LESS_THAN',
+            '<=': 'LESS_EQUAL',
+            '>': 'GREATER_THAN',
+            '>=': 'GREATER_EQUAL',
+            '&&': 'AND',
+            '||': 'OR',
+            '!': 'NOT',
+            '++': 'INCREMENT',
+            '--': 'DECREMENT'
+        }
+        return operator_map.get(operator, operator)
+
     def _expand_all_nodes(self):
         """Expand all nodes in the tree to show the complete structure"""
         def expand_node(item):
@@ -678,9 +722,66 @@ class IDE:
         self.lexical_analysis()
 
     def semantic_analysis(self):
-        """Simula el análisis semántico"""
-        self.update_result("Análisis semántico realizado...\n")
-        self.update_error("No se encontraron errores semánticos\n")
+        """Realiza el análisis semántico"""
+        try:
+            # Ensure we have tokens and AST
+            if not hasattr(self, 'last_tokens'):
+                self.lexical_analysis()
+            if not hasattr(self, 'last_ast') or not self.last_ast:
+                self.syntax_analysis()
+                # Switch back to result text display
+                self.ast_tree.pack_forget()
+                self.ast_scroll.pack_forget()
+                self.result_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+            # Perform semantic analysis
+            print(f"DEBUG: Starting semantic analysis with AST: {self.last_ast is not None}")
+            semantic_analyzer = SemanticAnalyzer(self.last_ast)
+            annotated_ast, semantic_errors = semantic_analyzer.analyze()
+            print(f"DEBUG: Semantic analysis completed. Annotated AST: {annotated_ast is not None}, Errors: {len(semantic_errors)}")
+
+            # Store results for display
+            self.last_annotated_ast = annotated_ast
+            self.semantic_errors = semantic_errors
+            self.symbol_table = semantic_analyzer.symbol_table
+            print(f"DEBUG: Stored results - annotated_ast exists: {hasattr(self, 'last_annotated_ast') and self.last_annotated_ast is not None}")
+
+            # Update semantic results display
+            if annotated_ast:
+                print("DEBUG: Showing annotated AST tree")
+                # Show annotated AST in tree format
+                self.result_text.pack_forget()
+                self.ast_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5, side=tk.LEFT)
+                self.ast_scroll.pack(fill=tk.Y, side=tk.RIGHT)
+
+                # Clear previous content
+                for item in self.ast_tree.get_children():
+                    self.ast_tree.delete(item)
+
+                # Populate annotated AST tree
+                self._populate_annotated_ast_tree('', annotated_ast)
+                self._expand_all_nodes()
+
+                # Update semantic result text for show_result method
+                self.semantic_result_text = "Análisis semántico completado.\nÁrbol anotado generado."
+            else:
+                print("DEBUG: No annotated AST, showing error")
+                self.update_result("Error en el análisis semántico")
+
+            # Update semantic errors (store but don't display immediately)
+            # The show_error method will display them when the semantic tab is selected
+            pass
+
+        except Exception as e:
+            import traceback
+            error_message = f"Error en análisis semántico:\n{str(e)}\n\n{traceback.format_exc()}"
+            print(f"DEBUG: Exception in semantic analysis: {error_message}")
+            self.update_error(error_message)
+            # Switch back to result text if needed
+            self.ast_tree.pack_forget()
+            self.ast_scroll.pack_forget()
+            self.result_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+            self.update_result("Error en el análisis semántico")
 
     def intermediate_code(self):
         """Simula la generación de código intermedio"""
@@ -694,26 +795,61 @@ class IDE:
     
     def show_result(self, result_type):
         """Muestra el resultado correspondiente al botón presionado"""
-        results = {
-            "lexico": "Resultados del análisis léxico:\n",
-            "sintactico": "Resultados del análisis sintáctico:\n",
-            "semantico": "Resultados del análisis semántico:\n",
-            "tabla": "Tabla de símbolos:\n",
-            "intermedio": "Código intermedio generado:\n"
-        }
+        print(f"DEBUG: show_result called with result_type='{result_type}'")
         
-        self.update_result(results.get(result_type, "Seleccione un tipo de resultado"))
+        if result_type == "semantico" and hasattr(self, 'last_annotated_ast') and self.last_annotated_ast:
+            print(f"DEBUG: Showing annotated AST. hasattr: {hasattr(self, 'last_annotated_ast')}, is not None: {self.last_annotated_ast is not None}")
+            # Show annotated AST tree
+            self.result_text.pack_forget()
+            self.ast_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5, side=tk.LEFT)
+            self.ast_scroll.pack(fill=tk.Y, side=tk.RIGHT)
+            
+            # Clear and repopulate tree
+            for item in self.ast_tree.get_children():
+                self.ast_tree.delete(item)
+            self._populate_annotated_ast_tree('', self.last_annotated_ast)
+            self._expand_all_nodes()
+            
+        elif result_type == "tabla" and hasattr(self, 'symbol_table'):
+            print("DEBUG: Showing symbol table")
+            # Show symbol table as text
+            self.ast_tree.pack_forget()
+            self.ast_scroll.pack_forget()
+            self.result_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+            self.update_result(str(self.symbol_table))
+            
+        else:
+            print(f"DEBUG: Showing default text for {result_type}")
+            # Default text results
+            self.ast_tree.pack_forget()
+            self.ast_scroll.pack_forget()
+            self.result_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+            
+            result_text = {
+                "lexico": "Resultados del análisis léxico:\n",
+                "sintactico": "Resultados del análisis sintáctico:\n",
+                "semantico": "Resultados del análisis semántico:\nEjecute el análisis semántico para ver el árbol anotado.",
+                "tabla": "Tabla de símbolos:\nEjecute el análisis semántico para ver la tabla de símbolos.",
+                "intermedio": "Código intermedio generado:\n"
+            }.get(result_type, "Seleccione un tipo de resultado")
+            self.update_result(result_text)
 
     def show_error(self, error_type):
         """Muestra los errores correspondientes al botón presionado"""
-        errors = {
-            "lexico": "Errores del análisis léxico:\n",
-            "sintactico": "Errores del análisis sintáctico:\n",
-            "semantico": "Errores del análisis semántico:\n",
-            "resultados": "Errores en los resultados:\n"
-        }
+        if error_type == "semantico" and hasattr(self, 'semantic_errors'):
+            if self.semantic_errors:
+                error_text = "Errores del análisis semántico:\n\n" + "\n".join(self.semantic_errors)
+            else:
+                error_text = "No se encontraron errores semánticos\n"
+        else:
+            error_text = {
+                "lexico": "Errores del análisis léxico:\n",
+                "sintactico": "Errores del análisis sintáctico:\n",
+                "semantico": "Errores del análisis semántico:\nEjecute el análisis semántico para ver los errores.",
+                "resultados": "Errores en los resultados:\n"
+            }.get(error_type, "Seleccione un tipo de error")
         
-        self.update_error(errors.get(error_type, "Seleccione un tipo de error"))
+        self.update_error(error_text)
 
     def update_line_numbers(self, event=None):
         """Update line numbers with proper alignment"""

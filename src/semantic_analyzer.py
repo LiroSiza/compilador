@@ -1,14 +1,14 @@
 from parser import *
 
 class SymbolTableEntry:
-    def __init__(self, name, var_type, scope='global', line=None, column=None):
+    def __init__(self, name, var_type, scope='global', line=None, column=None, address=None):
         self.name = name
         self.type = var_type
         self.scope = scope
         self.declaration_line = line  # Línea de declaración
         self.declaration_column = column
         self.lines = [line] if line is not None else []  # Todas las líneas donde aparece
-        self.memory_address = None  # For future use
+        self.address = address  # Dirección de memoria asignada
 
     def add_reference(self, line):
         """Agrega una línea donde se referencia el símbolo"""
@@ -23,13 +23,15 @@ class SymbolTable:
     def __init__(self):
         self.table = {}
         self.errors = []
+        self.next_address = 0  # Contador para asignar direcciones de memoria
 
     def insert(self, name, var_type, line=None, column=None):
         if name in self.table:
             self.errors.append(f"Variable '{name}' ya declarada en línea {line}, columna {column}")
             return False
-        entry = SymbolTableEntry(name, var_type, 'global', line, column)
+        entry = SymbolTableEntry(name, var_type, 'global', line, column, self.next_address)
         self.table[name] = entry
+        self.next_address += 1  # Incrementar dirección para la siguiente variable
         return True
 
     def add_reference(self, name, line):
@@ -48,12 +50,12 @@ class SymbolTable:
         if not self.table:
             return "Tabla de símbolos vacía"
         result = "Tabla de Símbolos:\n"
-        result += "-" * 100 + "\n"
-        result += f"{'Nombre':<15} {'Tipo':<10} {'Ámbito':<10} {'Líneas':<20}\n"
-        result += "-" * 100 + "\n"
+        result += "-" * 120 + "\n"
+        result += f"{'Nombre':<15} {'Tipo':<10} {'Ámbito':<10} {'Dirección':<12} {'Líneas':<20}\n"
+        result += "-" * 120 + "\n"
         for entry in self.table.values():
             lines_str = ', '.join(map(str, sorted(entry.lines)))
-            result += f"{entry.name:<15} {entry.type:<10} {entry.scope:<10} {lines_str:<20}\n"
+            result += f"{entry.name:<15} {entry.type:<10} {entry.scope:<10} {str(entry.address):<12} {lines_str:<20}\n"
         return result
 
 class SemanticAnalyzer:

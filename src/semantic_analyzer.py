@@ -64,6 +64,7 @@ class SemanticAnalyzer:
         self.symbol_table = SymbolTable()
         self.errors = []
         self.annotated_ast = None
+        self.constant_values = {}  # Dictionary to track constant values of variables
 
     def analyze(self):
         """Main analysis method"""
@@ -196,6 +197,8 @@ class SemanticAnalyzer:
                     constant_value = self.evaluate_constant_expression(annotated_expr)
                     if constant_value is not None:
                         annotated.constant_value = constant_value
+                        # Register this constant value for the variable
+                        self.constant_values[id_node.value] = constant_value
 
         return annotated
 
@@ -240,6 +243,10 @@ class SemanticAnalyzer:
             annotated.semantic_type = entry.type
             # Register this line as a reference to the symbol
             self.symbol_table.add_reference(node.value, node.line)
+            
+            # If this identifier has a known constant value, annotate it
+            if node.value in self.constant_values:
+                annotated.constant_value = self.constant_values[node.value]
         else:
             self.errors.append(f"Variable '{node.value}' no declarada en línea {node.line}, columna {node.column}")
             annotated.semantic_type = "unknown"
@@ -280,6 +287,9 @@ class SemanticAnalyzer:
                 return None
         elif isinstance(node, BooleanNode):
             return node.value
+        elif isinstance(node, IdentifierNode):
+            # Check if this identifier has a known constant value
+            return self.constant_values.get(node.value, None)
         elif hasattr(node, 'type') and node.type == 'operacion_binaria':
             if len(node.children) >= 2:
                 left_val = self.evaluate_constant_expression(node.children[0])

@@ -735,20 +735,16 @@ class IDE:
                 self.result_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
             # Perform semantic analysis
-            print(f"DEBUG: Starting semantic analysis with AST: {self.last_ast is not None}")
             semantic_analyzer = SemanticAnalyzer(self.last_ast)
             annotated_ast, semantic_errors = semantic_analyzer.analyze()
-            print(f"DEBUG: Semantic analysis completed. Annotated AST: {annotated_ast is not None}, Errors: {len(semantic_errors)}")
 
             # Store results for display
             self.last_annotated_ast = annotated_ast
             self.semantic_errors = semantic_errors
             self.symbol_table = semantic_analyzer.symbol_table
-            print(f"DEBUG: Stored results - annotated_ast exists: {hasattr(self, 'last_annotated_ast') and self.last_annotated_ast is not None}")
 
             # Update semantic results display
             if annotated_ast:
-                print("DEBUG: Showing annotated AST tree")
                 # Show annotated AST in tree format
                 self.result_text.pack_forget()
                 self.ast_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5, side=tk.LEFT)
@@ -765,7 +761,6 @@ class IDE:
                 # Update semantic result text for show_result method
                 self.semantic_result_text = "Análisis semántico completado.\nÁrbol anotado generado."
             else:
-                print("DEBUG: No annotated AST, showing error")
                 self.update_result("Error en el análisis semántico")
 
             # Update semantic errors (store but don't display immediately)
@@ -775,7 +770,6 @@ class IDE:
         except Exception as e:
             import traceback
             error_message = f"Error en análisis semántico:\n{str(e)}\n\n{traceback.format_exc()}"
-            print(f"DEBUG: Exception in semantic analysis: {error_message}")
             self.update_error(error_message)
             # Switch back to result text if needed
             self.ast_tree.pack_forget()
@@ -811,7 +805,6 @@ class IDE:
             self._expand_all_nodes()
             
         elif result_type == "tabla" and hasattr(self, 'symbol_table'):
-            print("DEBUG: Showing symbol table")
             # Show symbol table as text
             self.ast_tree.pack_forget()
             self.ast_scroll.pack_forget()

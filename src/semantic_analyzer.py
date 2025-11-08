@@ -5,12 +5,19 @@ class SymbolTableEntry:
         self.name = name
         self.type = var_type
         self.scope = scope
-        self.line = line
-        self.column = column
+        self.declaration_line = line  # Línea de declaración
+        self.declaration_column = column
+        self.lines = [line] if line is not None else []  # Todas las líneas donde aparece
         self.memory_address = None  # For future use
 
+    def add_reference(self, line):
+        """Agrega una línea donde se referencia el símbolo"""
+        if line not in self.lines:
+            self.lines.append(line)
+
     def __str__(self):
-        return f"Nombre: {self.name}, Tipo: {self.type}, Ámbito: {self.scope}, Línea: {self.line}, Columna: {self.column}"
+        lines_str = ', '.join(map(str, sorted(self.lines)))
+        return f"Nombre: {self.name}, Tipo: {self.type}, Ámbito: {self.scope}, Líneas: {lines_str}"
 
 class SymbolTable:
     def __init__(self):
@@ -25,6 +32,12 @@ class SymbolTable:
         self.table[name] = entry
         return True
 
+    def add_reference(self, name, line):
+        """Agrega una referencia a un símbolo existente"""
+        entry = self.table.get(name)
+        if entry:
+            entry.add_reference(line)
+
     def lookup(self, name):
         return self.table.get(name, None)
 
@@ -35,11 +48,12 @@ class SymbolTable:
         if not self.table:
             return "Tabla de símbolos vacía"
         result = "Tabla de Símbolos:\n"
-        result += "-" * 80 + "\n"
-        result += f"{'Nombre':<15} {'Tipo':<10} {'Ámbito':<10} {'Línea':<8} {'Columna':<8}\n"
-        result += "-" * 80 + "\n"
+        result += "-" * 100 + "\n"
+        result += f"{'Nombre':<15} {'Tipo':<10} {'Ámbito':<10} {'Líneas':<20}\n"
+        result += "-" * 100 + "\n"
         for entry in self.table.values():
-            result += f"{entry.name:<15} {entry.type:<10} {entry.scope:<10} {entry.line:<8} {entry.column:<8}\n"
+            lines_str = ', '.join(map(str, sorted(entry.lines)))
+            result += f"{entry.name:<15} {entry.type:<10} {entry.scope:<10} {lines_str:<20}\n"
         return result
 
 class SemanticAnalyzer:
@@ -212,6 +226,8 @@ class SemanticAnalyzer:
         entry = self.symbol_table.lookup(node.value)
         if entry:
             annotated.semantic_type = entry.type
+            # Register this line as a reference to the symbol
+            self.symbol_table.add_reference(node.value, node.line)
         else:
             self.errors.append(f"Variable '{node.value}' no declarada en línea {node.line}, columna {node.column}")
             annotated.semantic_type = "unknown"

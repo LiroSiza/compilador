@@ -199,6 +199,8 @@ class SemanticAnalyzer:
                         annotated.constant_value = constant_value
                         # Register this constant value for the variable
                         self.constant_values[id_node.value] = constant_value
+                        # Also assign the constant value to the identifier node
+                        annotated_id.constant_value = constant_value
 
         return annotated
 

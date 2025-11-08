@@ -626,6 +626,9 @@ class IDE:
             
         # Check for constant value first
         if hasattr(node, 'constant_value') and node.constant_value is not None:
+            # Special case for identifiers: show name and constant value
+            if node_type == 'ID' and hasattr(node, 'value'):
+                return f"{node_type}({node.value}, {node.constant_value})"
             return f"{node_type}({node.constant_value})"
             
         if hasattr(node, 'value') and node.value is not None:

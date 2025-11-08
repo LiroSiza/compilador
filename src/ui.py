@@ -227,7 +227,7 @@ class IDE:
         self.ast_tree['columns'] = ('type', 'value', 'line', 'column')
         self.ast_tree.heading('#0', text='Nodo')
         self.ast_tree.heading('type', text='Tipo')
-        self.ast_tree.heading('value', text='Valor')
+        self.ast_tree.heading('value', text='')
         self.ast_tree.heading('line', text='Línea')
         self.ast_tree.heading('column', text='Columna')
         

@@ -624,6 +624,10 @@ class IDE:
         else:
             node_type = str(type(node).__name__)
             
+        # Check for constant value first
+        if hasattr(node, 'constant_value') and node.constant_value is not None:
+            return f"{node_type}({node.constant_value})"
+            
         if hasattr(node, 'value') and node.value is not None:
             # Convert operators to readable names
             if node_type in ['operacion_binaria', 'BinaryOpNode'] and node.value:

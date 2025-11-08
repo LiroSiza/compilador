@@ -191,6 +191,11 @@ class SemanticAnalyzer:
                 else:
                     # Add type to assignment node
                     annotated.semantic_type = id_type
+                    
+                    # Evaluate constant expression
+                    constant_value = self.evaluate_constant_expression(annotated_expr)
+                    if constant_value is not None:
+                        annotated.constant_value = constant_value
 
         return annotated
 
@@ -215,6 +220,11 @@ class SemanticAnalyzer:
                 result_type = self.get_binary_op_result_type(node.value, left_type, right_type)
                 if result_type:
                     annotated.semantic_type = result_type
+                    
+                    # Evaluate constant expressions
+                    constant_value = self.evaluate_constant_expression(annotated)
+                    if constant_value is not None:
+                        annotated.constant_value = constant_value
                 else:
                     self.errors.append(f"Operación '{node.value}' no válida entre tipos '{left_type}' y '{right_type}' en línea {node.line}, columna {node.column}")
 
@@ -256,6 +266,43 @@ class SemanticAnalyzer:
         annotated = BooleanNode(node.value, node.line, node.column)
         annotated.semantic_type = "bool"
         return annotated
+
+    def evaluate_constant_expression(self, node):
+        """Evaluate constant expressions and return the computed value"""
+        if isinstance(node, NumberNode):
+            try:
+                # Convert string to number
+                if '.' in str(node.value):
+                    return float(node.value)
+                else:
+                    return int(node.value)
+            except (ValueError, TypeError):
+                return None
+        elif isinstance(node, BooleanNode):
+            return node.value
+        elif hasattr(node, 'type') and node.type == 'operacion_binaria':
+            if len(node.children) >= 2:
+                left_val = self.evaluate_constant_expression(node.children[0])
+                right_val = self.evaluate_constant_expression(node.children[1])
+                
+                if left_val is not None and right_val is not None:
+                    op = node.value
+                    try:
+                        if op == '+':
+                            return left_val + right_val
+                        elif op == '-':
+                            return left_val - right_val
+                        elif op == '*':
+                            return left_val * right_val
+                        elif op == '/':
+                            return left_val / right_val if right_val != 0 else None
+                        elif op == '%':
+                            return left_val % right_val if right_val != 0 else None
+                        elif op == '^':
+                            return left_val ** right_val
+                    except (ZeroDivisionError, TypeError):
+                        return None
+        return None
 
     def annotate_if(self, node):
         """Annotate if statement"""

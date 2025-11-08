@@ -46,8 +46,8 @@ class StatementListNode(ASTNode):
         super().__init__("lista_sentencias")
 
 class AssignmentNode(ASTNode):
-    def __init__(self, identifier, expression):
-        super().__init__("asignacion")
+    def __init__(self, identifier, expression, line=None, column=None):
+        super().__init__("asignacion", line=line, column=column)
         self.add_child(identifier)
         self.add_child(expression)
 
@@ -82,8 +82,8 @@ class OutputNode(ASTNode):
         self.add_child(expression)
 
 class BinaryOpNode(ASTNode):
-    def __init__(self, operator, left, right):
-        super().__init__("operacion_binaria", operator)
+    def __init__(self, operator, left, right, line=None, column=None):
+        super().__init__("operacion_binaria", operator, line=line, column=column)
         self.add_child(left)
         self.add_child(right)
 
@@ -301,48 +301,10 @@ class Parser:
             binary_op = '+' if op_value == '++' else '-'
             
             # Create binary operation: a + 1 or a - 1
-            binary_expr = BinaryOpNode(binary_op, right_id_node, one_node)
+            binary_expr = BinaryOpNode(binary_op, right_id_node, one_node, id_tok.line, id_tok.column)
             
             # Create assignment: a = (a + 1) or a = (a - 1)
-            return AssignmentNode(id_node, binary_expr)
-        
-        # Fallback if something went wrong
-        return PostIncrementNode(id_node, op_value)
-        """Parse post-increment/decrement statement: id++ ; or id-- ;"""
-        """Transforms a++ into assignment: a = a + 1"""
-        # Consume id
-        id_tok = self.match(2)
-        id_node = IdentifierNode(id_tok.value, id_tok.line, id_tok.column) if id_tok else None
-        
-        # Consume ++ or --
-        tok = self.current()
-        op_value = None
-        if tok and tok.type == 5 and tok.value in ('++','--'):
-            op_value = tok.value
-            self.advance()
-        else:
-            if tok:
-                self.errors.append(f"Se esperaba '++' o '--' en línea {tok.line}, col {tok.column}")
-        
-        # Expect semicolon
-        self.match(7, ';')
-        
-        # Create assignment node: a = a + 1 (or a = a - 1 for --)
-        if id_node and op_value:
-            # Create a copy of the identifier for the right side of the assignment
-            right_id_node = IdentifierNode(id_node.value, id_node.line, id_node.column)
-            
-            # Create the number node (1)
-            one_node = NumberNode(1, id_node.line, id_node.column)
-            
-            # Determine the operator (+ for ++, - for --)
-            binary_op = '+' if op_value == '++' else '-'
-            
-            # Create binary operation: a + 1 or a - 1
-            binary_expr = BinaryOpNode(binary_op, right_id_node, one_node)
-            
-            # Create assignment: a = (a + 1) or a = (a - 1)
-            return AssignmentNode(id_node, binary_expr)
+            return AssignmentNode(id_node, binary_expr, id_tok.line, id_tok.column)
         
         # Fallback if something went wrong
         return PostIncrementNode(id_node, op_value)
@@ -351,9 +313,11 @@ class Parser:
         # id = sent_expresion
         id_tok = self.match(2)
         id_node = IdentifierNode(id_tok.value, id_tok.line, id_tok.column) if id_tok else None
-        self.match(8, '=')
+        assign_tok = self.match(8, '=')
         expr = self.parse_sent_expresion()
-        return AssignmentNode(id_node, expr)
+        assign_line = assign_tok.line if assign_tok else (id_tok.line if id_tok else None)
+        assign_column = assign_tok.column if assign_tok else (id_tok.column if id_tok else None)
+        return AssignmentNode(id_node, expr, assign_line, assign_column)
 
     def parse_sent_expresion(self):
         # expresion ; | ;
@@ -439,16 +403,18 @@ class Parser:
         tok = self.current()
         if tok and tok.type == 6 and tok.value in ('<','<=','>','>=','==','!='):
             op = tok.value
+            op_line, op_column = tok.line, tok.column
             self.advance()
             right = self.parse_expresion_simple()
-            left = BinaryOpNode(op, left, right)
+            left = BinaryOpNode(op, left, right, op_line, op_column)
         # handle logical AND/OR operators
         tok = self.current()
         while tok and tok.type == 6 and tok.value in ('&&','||'):
             op = tok.value
+            op_line, op_column = tok.line, tok.column
             self.advance()
             right = self.parse_expresion_simple()
-            left = BinaryOpNode(op, left, right)
+            left = BinaryOpNode(op, left, right, op_line, op_column)
             tok = self.current()
         return left
 
@@ -458,9 +424,10 @@ class Parser:
             tok = self.current()
             if tok and tok.type == 5 and tok.value in ('+','-'):
                 op = tok.value
+                op_line, op_column = tok.line, tok.column
                 self.advance()
                 right = self.parse_termino()
-                left = BinaryOpNode(op, left, right)
+                left = BinaryOpNode(op, left, right, op_line, op_column)
             else:
                 break
         return left
@@ -471,9 +438,10 @@ class Parser:
             tok = self.current()
             if tok and tok.type == 5 and tok.value in ('*','/','%'):
                 op = tok.value
+                op_line, op_column = tok.line, tok.column
                 self.advance()
                 right = self.parse_factor()
-                left = BinaryOpNode(op, left, right)
+                left = BinaryOpNode(op, left, right, op_line, op_column)
             else:
                 break
         return left
@@ -483,9 +451,10 @@ class Parser:
         tok = self.current()
         if tok and tok.type == 5 and tok.value == '^':
             op = tok.value
+            op_line, op_column = tok.line, tok.column
             self.advance()
             right = self.parse_componente()
-            left = BinaryOpNode(op, left, right)
+            left = BinaryOpNode(op, left, right, op_line, op_column)
         return left
 
     def parse_componente(self):

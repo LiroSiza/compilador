@@ -196,6 +196,11 @@ class SemanticAnalyzer:
                     # Evaluate constant expression
                     constant_value = self.evaluate_constant_expression(annotated_expr)
                     if constant_value is not None:
+                        # Type conversion for constant values (only int to float allowed)
+                        if id_type == "float" and isinstance(constant_value, int):
+                            # Convert int to float when assigning to float variable
+                            constant_value = float(constant_value)
+                        
                         annotated.constant_value = constant_value
                         # Register this constant value for the variable
                         self.constant_values[id_node.value] = constant_value
@@ -431,6 +436,10 @@ class SemanticAnalyzer:
         # Allow int to float conversion
         if type1 == "float" and type2 == "int":
             return True
+
+        # Float to int conversion is NOT allowed (generates semantic error)
+        # if type1 == "int" and type2 == "float":
+        #     return True
 
         return False
 

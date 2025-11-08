@@ -116,11 +116,20 @@ class Parser:
         self.errors = []
         self.ast = None
 
+    def skip_comments(self):
+        """Skip comment tokens"""
+        while self.pos < len(self.tokens) and self.tokens[self.pos].type == 3:  # COMENTARIO
+            self.pos += 1
+
     def current(self):
+        self.skip_comments()
         return self.tokens[self.pos] if self.pos < len(self.tokens) else None
 
     def advance(self):
-        self.pos += 1
+        self.skip_comments()
+        if self.pos < len(self.tokens):
+            self.pos += 1
+        self.skip_comments()
 
     def match(self, token_type, value=None):
         tok = self.current()
@@ -137,12 +146,18 @@ class Parser:
 
     def peek(self):
         """Return next token without consuming"""
-        return self.tokens[self.pos+1] if self.pos+1 < len(self.tokens) else None
+        current_pos = self.pos
+        self.skip_comments()
+        next_tok = self.tokens[self.pos + 1] if self.pos + 1 < len(self.tokens) else None
+        self.pos = current_pos  # Restore position
+        return next_tok
 
     def parse(self):
         self.ast = self.parse_program()
-        if self.current():
-            tok = self.current()
+        # Skip any remaining comments at the end
+        self.skip_comments()
+        if self.pos < len(self.tokens):
+            tok = self.tokens[self.pos]
             self.errors.append(f"Token inesperado '{tok.value}' en línea {tok.line}, col {tok.column}")
         return self.ast, self.errors    # Grammar methods
     def parse_program(self):

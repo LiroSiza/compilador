@@ -187,7 +187,29 @@ class SemanticAnalyzer:
                 id_type = annotated_id.semantic_type
                 expr_type = annotated_expr.semantic_type
 
-                if not self.types_compatible(id_type, expr_type):
+                # Special handling for int = float assignments
+                if id_type == "int" and expr_type == "float":
+                    # Check if it's a direct float literal assignment
+                    from parser import NumberNode
+                    if isinstance(expr_node, NumberNode) and '.' in str(expr_node.value):
+                        # Direct float literal to int assignment - ERROR
+                        self.errors.append(f"Tipos incompatibles en asignación: '{id_type}' = '{expr_type}' en línea {node.line}, columna {node.column}")
+                    else:
+                        # Expression resulting in float to int assignment - ALLOW with truncation
+                        annotated.semantic_type = id_type
+                        
+                        # Evaluate constant expression and truncate
+                        constant_value = self.evaluate_constant_expression(annotated_expr)
+                        if constant_value is not None:
+                            # Truncate float to int
+                            constant_value = int(constant_value)
+                            
+                            annotated.constant_value = constant_value
+                            # Register this constant value for the variable
+                            self.constant_values[id_node.value] = constant_value
+                            # Also assign the constant value to the identifier node
+                            annotated_id.constant_value = constant_value
+                elif not self.types_compatible(id_type, expr_type):
                     self.errors.append(f"Tipos incompatibles en asignación: '{id_type}' = '{expr_type}' en línea {node.line}, columna {node.column}")
                     # Don't evaluate or assign constant value for invalid assignments
                 else:
@@ -447,9 +469,13 @@ class SemanticAnalyzer:
     def get_binary_op_result_type(self, op, type1, type2):
         """Get result type for binary operation"""
         # Arithmetic operations
-        if op in ['+', '-', '*', '/']:
+        if op in ['+', '-', '*']:
             if type1 in ['int', 'float'] and type2 in ['int', 'float']:
                 return 'float' if 'float' in [type1, type2] else 'int'
+        elif op == '/':
+            # Division always results in float
+            if type1 in ['int', 'float'] and type2 in ['int', 'float']:
+                return 'float'
 
         # Comparison operations
         if op in ['<', '<=', '>', '>=', '==', '!=']:

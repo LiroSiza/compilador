@@ -194,8 +194,8 @@ class SemanticAnalyzer:
                     if isinstance(expr_node, NumberNode) and '.' in str(expr_node.value):
                         # Direct float literal to int assignment - ERROR
                         self.errors.append(f"Tipos incompatibles en asignación: '{id_type}' = '{expr_type}' en línea {node.line}, columna {node.column}")
-                    else:
-                        # Expression resulting in float to int assignment - ALLOW with truncation
+                    elif self.is_pure_constant_expression(expr_node):
+                        # Pure constant expression resulting in float to int assignment - ALLOW with truncation
                         annotated.semantic_type = id_type
                         
                         # Evaluate constant expression and truncate
@@ -209,6 +209,9 @@ class SemanticAnalyzer:
                             self.constant_values[id_node.value] = constant_value
                             # Also assign the constant value to the identifier node
                             annotated_id.constant_value = constant_value
+                    else:
+                        # Non-pure constant expression (contains variables) resulting in float to int assignment - ERROR
+                        self.errors.append(f"Tipos incompatibles en asignación: '{id_type}' = '{expr_type}' en línea {node.line}, columna {node.column}")
                 elif not self.types_compatible(id_type, expr_type):
                     self.errors.append(f"Tipos incompatibles en asignación: '{id_type}' = '{expr_type}' en línea {node.line}, columna {node.column}")
                     # Don't evaluate or assign constant value for invalid assignments
@@ -304,8 +307,23 @@ class SemanticAnalyzer:
         annotated.semantic_type = "bool"
         return annotated
 
+    def is_pure_constant_expression(self, node):
+        """Check if expression consists only of literals (no variables)"""
+        if isinstance(node, NumberNode) or isinstance(node, BooleanNode):
+            return True
+        elif isinstance(node, IdentifierNode):
+            # Variables are not pure constants
+            return False
+        elif hasattr(node, 'type') and node.type == 'operacion_binaria':
+            if len(node.children) >= 2:
+                return (self.is_pure_constant_expression(node.children[0]) and 
+                       self.is_pure_constant_expression(node.children[1]))
+        elif hasattr(node, 'type') and node.type == 'operacion_unaria':
+            if len(node.children) >= 1:
+                return self.is_pure_constant_expression(node.children[0])
+        return False
+
     def evaluate_constant_expression(self, node):
-        """Evaluate constant expressions and return the computed value"""
         if isinstance(node, NumberNode):
             try:
                 # Convert string to number

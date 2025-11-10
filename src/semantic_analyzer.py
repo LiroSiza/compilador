@@ -189,11 +189,12 @@ class SemanticAnalyzer:
 
                 if not self.types_compatible(id_type, expr_type):
                     self.errors.append(f"Tipos incompatibles en asignación: '{id_type}' = '{expr_type}' en línea {node.line}, columna {node.column}")
+                    # Don't evaluate or assign constant value for invalid assignments
                 else:
                     # Add type to assignment node
                     annotated.semantic_type = id_type
                     
-                    # Evaluate constant expression
+                    # Evaluate constant expression only for valid assignments
                     constant_value = self.evaluate_constant_expression(annotated_expr)
                     if constant_value is not None:
                         # Type conversion for constant values (only int to float allowed)

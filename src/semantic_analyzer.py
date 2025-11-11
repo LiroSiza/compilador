@@ -357,6 +357,24 @@ class SemanticAnalyzer:
                             return left_val % right_val if right_val != 0 else None
                         elif op == '^':
                             return left_val ** right_val
+                        # Relational operators
+                        elif op == '<':
+                            return left_val < right_val
+                        elif op == '<=':
+                            return left_val <= right_val
+                        elif op == '>':
+                            return left_val > right_val
+                        elif op == '>=':
+                            return left_val >= right_val
+                        elif op == '==':
+                            return left_val == right_val
+                        elif op == '!=':
+                            return left_val != right_val
+                        # Logical operators
+                        elif op == '&&':
+                            return left_val and right_val
+                        elif op == '||':
+                            return left_val or right_val
                     except (ZeroDivisionError, TypeError):
                         return None
         return None

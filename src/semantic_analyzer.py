@@ -11,9 +11,8 @@ class SymbolTableEntry:
         self.address = address  # Dirección de memoria asignada
 
     def add_reference(self, line):
-        """Agrega una línea donde se referencia el símbolo"""
-        if line not in self.lines:
-            self.lines.append(line)
+        """Agrega una línea donde se referencia el símbolo (permite duplicados)"""
+        self.lines.append(line)
 
     def __str__(self):
         lines_str = ', '.join(map(str, sorted(self.lines)))

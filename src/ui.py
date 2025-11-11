@@ -609,9 +609,9 @@ class IDE:
         # Get semantic type if available
         semantic_type = getattr(node, 'semantic_type', '')
         
-        # Create tree item
+        # Create tree item - include empty string for 'value' column
         item = self.ast_tree.insert(parent, 'end', text=node_text, 
-                                  values=(semantic_type, node.line or '', node.column or ''))
+                                  values=(semantic_type, '', node.line or '', node.column or ''))
         
         # Recursively add children
         for child in node.children:
@@ -619,16 +619,29 @@ class IDE:
 
     def _get_node_display_text(self, node):
         """Get display text for AST node"""
-        # For operacion_binaria, use the repr directly since it already has the proper format
-        if hasattr(node, 'type') and node.type == 'operacion_binaria':
-            return repr(node)
-            
         if hasattr(node, 'type'):
             node_type = node.type
         else:
             node_type = str(type(node).__name__)
+        
+        # Handle operacion_binaria - show constant_value if available, otherwise show operator
+        if node_type == 'operacion_binaria':
+            op_names = {
+                '+': 'PLUS', '-': 'MINUS', '*': 'MULTIPLY', '/': 'DIVIDE',
+                '%': 'MODULO', '^': 'POWER', '==': 'EQUAL', '!=': 'NOT_EQUAL',
+                '<': 'LESS_THAN', '<=': 'LESS_EQUAL', '>': 'GREATER_THAN', '>=': 'GREATER_EQUAL',
+                '&&': 'AND', '||': 'OR'
+            }
+            # If there's a constant value, show it instead of the operator symbol
+            if hasattr(node, 'constant_value') and node.constant_value is not None:
+                op_name = op_names.get(node.value, node.value) if hasattr(node, 'value') else 'OP'
+                return f"operacion_binaria({node.constant_value}, {op_name})"
+            # Otherwise show the operator symbol
+            elif hasattr(node, 'value') and node.value is not None:
+                op_name = op_names.get(node.value, node.value)
+                return f"operacion_binaria({node.value}, {op_name})"
             
-        # Check for constant value first
+        # Check for constant value
         if hasattr(node, 'constant_value') and node.constant_value is not None:
             # Special case for identifiers: show name and constant value
             if node_type == 'ID' and hasattr(node, 'value'):

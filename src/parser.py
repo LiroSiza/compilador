@@ -96,7 +96,7 @@ class BinaryOpNode(ASTNode):
             '>=': 'GREATER_EQUAL', '&&': 'AND', '||': 'OR'
         }
         op_name = op_names.get(self.value, self.value)
-        return f"operacion_binaria({op_name})"
+        return f"operacion_binaria({self.value}, {op_name})"
 
 class UnaryOpNode(ASTNode):
     def __init__(self, operator, operand):

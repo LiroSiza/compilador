@@ -619,6 +619,10 @@ class IDE:
 
     def _get_node_display_text(self, node):
         """Get display text for AST node"""
+        # For operacion_binaria, use the repr directly since it already has the proper format
+        if hasattr(node, 'type') and node.type == 'operacion_binaria':
+            return repr(node)
+            
         if hasattr(node, 'type'):
             node_type = node.type
         else:
@@ -632,16 +636,6 @@ class IDE:
             return f"{node_type}({node.constant_value})"
             
         if hasattr(node, 'value') and node.value is not None:
-            # Convert operators to readable names
-            if node_type in ['operacion_binaria', 'BinaryOpNode'] and node.value:
-                op_names = {
-                    '+': 'PLUS', '-': 'MINUS', '*': 'MULTIPLY', '/': 'DIVIDE',
-                    '%': 'MODULO', '^': 'POWER', '==': 'EQUAL', '!=': 'NOT_EQUAL',
-                    '<': 'LESS', '<=': 'LESS_EQUAL', '>': 'GREATER', '>=': 'GREATER_EQUAL',
-                    '&&': 'AND', '||': 'OR'
-                }
-                display_value = op_names.get(node.value, node.value)
-                return f"{node_type}({display_value})"
             return f"{node_type}({node.value})"
         return node_type
 

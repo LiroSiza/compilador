@@ -86,6 +86,17 @@ class BinaryOpNode(ASTNode):
         super().__init__("operacion_binaria", operator, line=line, column=column)
         self.add_child(left)
         self.add_child(right)
+    
+    def __repr__(self):
+        # Map operators to descriptive names
+        op_names = {
+            '+': 'PLUS', '-': 'MINUS', '*': 'MULTIPLY', '/': 'DIVIDE',
+            '%': 'MODULO', '^': 'POWER', '==': 'EQUAL', '!=': 'NOT_EQUAL',
+            '<': 'LESS_THAN', '<=': 'LESS_EQUAL', '>': 'GREATER_THAN', 
+            '>=': 'GREATER_EQUAL', '&&': 'AND', '||': 'OR'
+        }
+        op_name = op_names.get(self.value, self.value)
+        return f"operacion_binaria({op_name})"
 
 class UnaryOpNode(ASTNode):
     def __init__(self, operator, operand):

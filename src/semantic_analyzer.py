@@ -352,7 +352,12 @@ class SemanticAnalyzer:
                         elif op == '*':
                             return left_val * right_val
                         elif op == '/':
-                            return left_val / right_val if right_val != 0 else None
+                            if right_val != 0:
+                                result = left_val / right_val
+                                # Always truncate division result to integer
+                                return int(result)
+                            else:
+                                return None
                         elif op == '%':
                             return left_val % right_val if right_val != 0 else None
                         elif op == '^':

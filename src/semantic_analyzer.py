@@ -181,6 +181,8 @@ class SemanticAnalyzer:
             annotated_expr = self.annotate_types(expr_node)
             annotated.add_child(annotated_expr)
 
+            # Note: References are already added during annotate_types when identifiers are processed
+
             # Type checking
             if hasattr(annotated_id, 'semantic_type') and hasattr(annotated_expr, 'semantic_type'):
                 id_type = annotated_id.semantic_type
@@ -383,6 +385,21 @@ class SemanticAnalyzer:
                     except (ZeroDivisionError, TypeError):
                         return None
         return None
+
+    def add_expression_references(self, node):
+        """Add symbol table references for all identifiers in an expression"""
+        if not node:
+            return
+            
+        if isinstance(node, IdentifierNode):
+            # Add reference for this identifier
+            entry = self.symbol_table.lookup(node.value)
+            if entry:
+                self.symbol_table.add_reference(node.value, node.line)
+        else:
+            # Recursively process children
+            for child in getattr(node, 'children', []):
+                self.add_expression_references(child)
 
     def annotate_if(self, node):
         """Annotate if statement"""

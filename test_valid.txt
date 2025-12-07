@@ -1,0 +1,20 @@
+main {
+    int x, y, z;
+    float a, b;
+    bool flag;
+
+    x = 5;
+    y = x + 3;
+    z = y * 2;
+
+    if x > 0 then
+        a = 3.14;
+        flag = true;
+    else
+        a = 2.71;
+        flag = false;
+    end
+
+    cin >> z;
+    cout << a;
+}

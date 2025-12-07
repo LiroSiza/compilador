@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lexer import Lexer
 from parser import Parser
 from semantic_analyzer import SemanticAnalyzer
+from intermediate_code_generator import IntermediateCodeGenerator
 
 class IDE:
     def __init__(self, root):
@@ -792,9 +793,32 @@ class IDE:
             self.update_result("Error en el análisis semántico")
 
     def intermediate_code(self):
-        """Simula la generación de código intermedio"""
-        self.update_result("Generación de código intermedio...\n")
-        self.update_error("No se encontraron errores en la generación de código intermedio\n")
+        """Genera código intermedio P-code"""
+        try:
+            # Ensure we have the annotated AST and symbol table
+            if not hasattr(self, 'last_annotated_ast') or not self.last_annotated_ast:
+                self.semantic_analysis()
+                if not hasattr(self, 'last_annotated_ast') or not self.last_annotated_ast:
+                    self.update_result("Error: No se pudo generar el AST anotado para código intermedio")
+                    return
+
+            # Generate intermediate code
+            code_generator = IntermediateCodeGenerator(self.last_annotated_ast, self.symbol_table)
+            instructions = code_generator.generate_code()
+
+            # Store the instructions for display
+            self.intermediate_instructions = instructions
+
+            # Display the code table
+            code_table = code_generator.get_code_table()
+            self.update_result(code_table)
+            self.update_error("Código intermedio generado exitosamente\n")
+
+        except Exception as e:
+            import traceback
+            error_message = f"Error en generación de código intermedio:\n{str(e)}\n\n{traceback.format_exc()}"
+            self.update_error(error_message)
+            self.update_result("Error en la generación de código intermedio")
 
     def execute_code(self):
         """Simula la ejecución del código"""
@@ -817,6 +841,20 @@ class IDE:
                 self.ast_tree.delete(item)
             self._populate_annotated_ast_tree('', self.last_annotated_ast)
             self._expand_all_nodes()
+            
+        elif result_type == "intermedio":
+            # Show intermediate code as text
+            self.ast_tree.pack_forget()
+            self.ast_scroll.pack_forget()
+            self.result_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+            if hasattr(self, 'intermediate_instructions') and self.intermediate_instructions:
+                from intermediate_code_generator import IntermediateCodeGenerator
+                # Create a temporary generator just to format the table
+                temp_gen = IntermediateCodeGenerator(None, None)
+                temp_gen.instructions = self.intermediate_instructions
+                self.update_result(temp_gen.get_code_table())
+            else:
+                self.update_result("Código intermedio:\nEjecute la generación de código intermedio para ver las instrucciones P-code.")
             
         elif result_type == "tabla" and hasattr(self, 'symbol_table'):
             # Show symbol table as text

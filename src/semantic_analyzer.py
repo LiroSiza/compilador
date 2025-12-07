@@ -306,6 +306,7 @@ class SemanticAnalyzer:
         """Annotate boolean literal"""
         annotated = BooleanNode(node.value, node.line, node.column)
         annotated.semantic_type = "bool"
+        annotated.value = node.value.lower() == 'true'
         return annotated
 
     def is_pure_constant_expression(self, node):

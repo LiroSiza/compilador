@@ -1,0 +1,347 @@
+================================================================================
+              ANÁLISIS SEMÁNTICO - EXPLICACIÓN TÉCNICA
+                Compilador de Lenguaje de Programación
+================================================================================
+
+FECHA: Noviembre 2025
+AUTORES: Equipo de Desarrollo del Compilador
+
+
+1. INTRODUCCIÓN
+===============================================================================
+El análisis semántico verifica el significado contextual del programa, asegurando
+que las operaciones tengan sentido semántico: tipos correctos, variables declaradas,
+compatibilidad de tipos, evaluación de expresiones constantes y rastreo de referencias.
+
+ANÁLISIS EN DOS PASADAS:
+  Primera pasada:  Construcción de la tabla de símbolos
+  Segunda pasada:  Verificación de tipos y propagación de atributos
+
+
+2. TABLA DE SÍMBOLOS
+===============================================================================
+Mantiene información sobre cada identificador: nombre, tipo (int/float/bool),
+ámbito (global), líneas de uso, columna de declaración y dirección de memoria.
+
+
+3. GRAMÁTICA EXTENDIDA CON ATRIBUTOS
+===============================================================================
+
+Notación:
+  .type   = tipo semántico del nodo
+  .value  = valor constante evaluado
+  ↑       = atributo sintetizado (se propaga hacia arriba)
+  ↓       = atributo heredado (se pasa hacia abajo)
+  [ ]     = acciones semánticas
+
+-------------------------------------------------------------------------------
+programa → declaraciones inicio sentencias fin
+    [ programa.table = nueva_tabla_simbolos() ]
+
+declaracion → tipo lista_ids ;
+    [ para cada id en lista_ids:
+        entry = crear_entrada(id.name, tipo.type, id.line, id.column)
+        entry.address = siguiente_direccion()
+        tabla.insertar(entry)
+    ]
+
+tipo → int | float | bool
+    [ tipo.type = "int" | "float" | "bool" ]
+
+-------------------------------------------------------------------------------
+asignacion → ID = expresion ;
+    [ id.entry = tabla.buscar(ID.name)
+      id.type ↑ = id.entry.type
+      id.entry.lineas.agregar(ID.line)
+      
+      if not compatible(id.type, expresion.type) entonces
+          if id.type == "int" and expresion.type == "float" entonces
+              if es_expresion_pura_constante(expresion) entonces
+                  asignacion.value = truncar(expresion.value)
+              sino
+                  ERROR: "Tipos incompatibles"
+      sino
+          asignacion.type ↑ = id.type
+          if expresion.value != NULL entonces
+              tabla_constantes[ID.name] = expresion.value
+    ]
+
+-------------------------------------------------------------------------------
+expresion_logica → expresion_logica && expresion_relacional
+                 | expresion_logica || expresion_relacional
+    [ if izq.type == "bool" and der.type == "bool" entonces
+          expresion_logica.type ↑ = "bool"
+          if izq.value != NULL and der.value != NULL entonces
+              expresion_logica.value ↑ = evaluar(izq.value op der.value)
+    ]
+
+expresion_relacional → expresion_aritmetica op_relacional expresion_aritmetica
+    [ if izq.type in ['int', 'float'] and der.type in ['int', 'float'] entonces
+          expresion_relacional.type ↑ = "bool"
+          if izq.value != NULL and der.value != NULL entonces
+              expresion_relacional.value ↑ = evaluar(izq.value op der.value)
+    ]
+    op_relacional → < | <= | > | >= | == | !=
+
+expresion_aritmetica → expresion_aritmetica + termino
+                     | expresion_aritmetica - termino
+    [ if izq.type in ['int', 'float'] and der.type in ['int', 'float'] entonces
+          if 'float' in [izq.type, der.type] entonces
+              expresion_aritmetica.type ↑ = "float"
+          sino
+              expresion_aritmetica.type ↑ = "int"
+          
+          if izq.value != NULL and der.value != NULL entonces
+              expresion_aritmetica.value ↑ = izq.value op der.value
+    ]
+
+termino → termino * factor | termino / factor
+    [ if op == '/' entonces
+          termino.type ↑ = "float"  // División siempre resulta en float
+          if der.value != 0 entonces
+              termino.value ↑ = truncar(izq.value / der.value)
+      sino
+          if 'float' in [izq.type, der.type] entonces
+              termino.type ↑ = "float"
+          sino
+              termino.type ↑ = "int"
+          termino.value ↑ = izq.value * der.value
+    ]
+
+factor → ID | NUM | BOOL | ( expresion ) | ! factor
+    [ if factor es ID entonces
+          id.entry = tabla.buscar(ID.name)
+          factor.type ↑ = id.entry.type
+          id.entry.lineas.agregar(ID.line)
+          if ID.name en tabla_constantes entonces
+              factor.value ↑ = tabla_constantes[ID.name]
+      
+      sino si factor es NUM entonces
+          factor.type ↑ = "float" si contiene '.' sino "int"
+          factor.value ↑ = convertir_a_numero(NUM.lexema)
+      
+      sino si factor es BOOL entonces
+          factor.type ↑ = "bool"
+          factor.value ↑ = convertir_a_booleano(BOOL.lexema)
+    ]
+
+-------------------------------------------------------------------------------
+seleccion → si ( condicion ) entonces sentencias finsi
+          | si ( condicion ) entonces sentencias sino sentencias finsi
+    [ if condicion.type != "bool" entonces ERROR ]
+
+iteracion → mientras ( condicion ) hacer sentencias finmientras
+    [ if condicion.type != "bool" entonces ERROR ]
+
+repeticion → hacer sentencias hasta ( condicion ) ;
+    [ if condicion.type != "bool" entonces ERROR ]
+
+sent_in → in ( ID ) ;
+    [ id.entry = tabla.buscar(ID.name)
+      id.entry.lineas.agregar(ID.line) ]
+
+sent_out → out ( expresion ) ;
+
+
+4. REGLAS DE COMPATIBILIDAD DE TIPOS
+===============================================================================
+CONVERSIONES PERMITIDAS:
+  int → float    (Conversión implícita)
+
+CONVERSIONES RESTRINGIDAS:
+  float → int    (Solo en expresiones constantes puras, con truncamiento)
+
+TIPOS NO COMPATIBLES:
+  int ↔ bool,  float ↔ bool
+
+
+5. EVALUACIÓN DE EXPRESIONES CONSTANTES
+===============================================================================
+Una expresión es "pura constante" si contiene solo literales (sin variables).
+Los valores constantes se evalúan en tiempo de compilación y se propagan.
+
+División: Siempre resulta en float, se TRUNCA al asignar a int (no redondea).
+
+
+6. FORMATO DE VISUALIZACIÓN EN EL AST SEMÁNTICO
+===============================================================================
+operacion_binaria(valor_constante, NOMBRE_OPERADOR)
+
+Ejemplos:
+  10 - 3      → operacion_binaria(7, MINUS)
+  5.0 + 2.5   → operacion_binaria(7.5, PLUS)
+  x * y       → operacion_binaria(*, MULTIPLY)  [sin constante]
+  3 == 3      → operacion_binaria(True, EQUAL)
+
+Mapeo de operadores:
+  '+' → PLUS,  '-' → MINUS,  '*' → MULTIPLY,  '/' → DIVIDE
+  '<' → LESS_THAN,  '>' → GREATER_THAN,  '==' → EQUAL,  '!=' → NOT_EQUAL
+  '&&' → AND,  '||' → OR
+
+Identificadores: ID(nombre, valor_constante) o ID(nombre) si no hay constante
+
+
+7. EJEMPLOS
+===============================================================================
+EJEMPLO 1: Evaluación constante
+  Código:           AST Semántico:
+  declaraciones     asignacion
+    int x;          ├── ID(x) [type: int]
+  inicio            └── operacion_binaria(8, PLUS) [type: int]
+    x = 5 + 3;          ├── NUM(5) [type: int]
+  fin                   └── NUM(3) [type: int]
+
+EJEMPLO 2: Truncamiento float → int
+  declaraciones
+    int resultado;
+  inicio
+    resultado = 7.8 + 2.1;  // resultado = 9 (truncado de 9.9)
+  fin
+
+EJEMPLO 3: Error - Variable no declarada
+  declaraciones
+    int x;
+  inicio
+    y = 5;  // ERROR: "Variable 'y' no declarada"
+  fin
+
+EJEMPLO 4: Error - Tipos incompatibles
+  declaraciones
+    int num;
+    float decimal;
+  inicio
+    decimal = 3.14;
+    num = decimal;  // ERROR: "Tipos incompatibles: 'int' = 'float'"
+  fin                 // (No es expresión constante pura)
+
+
+8. MENSAJES DE ERROR SEMÁNTICO
+===============================================================================
+• "Variable 'nombre' ya declarada en línea X, columna Y"
+• "Variable 'nombre' no declarada en línea X, columna Y"
+• "Tipos incompatibles en asignación: 'tipo1' = 'tipo2' en línea X, columna Y"
+• "Operación 'op' no válida entre tipos 'tipo1' y 'tipo2' en línea X, columna Y"
+• "Operador '!' requiere operando booleano, encontrado 'tipo' en línea X"
+• "Condición del if/while/do-until debe ser booleana, encontrado 'tipo' en línea X"
+
+
+9. ESTRUCTURAS DE DATOS
+===============================================================================
+clase SymbolTableEntry:
+    name: string                  // Nombre del identificador
+    type: string                  // Tipo (int, float, bool)
+    scope: string                 // Ámbito (global)
+    declaration_line: int         // Línea de declaración
+    lines: lista[int]             // Líneas donde aparece
+    address: int                  // Dirección de memoria
+
+clase SymbolTable:
+    table: diccionario[string → SymbolTableEntry]
+    errors: lista[string]
+    next_address: int
+
+    métodos:
+        insert(name, type, line, column) → bool
+        lookup(name) → SymbolTableEntry
+        add_reference(name, line)
+
+clase SemanticAnalyzer:
+    ast: ASTNode
+    symbol_table: SymbolTable
+    errors: lista[string]
+    annotated_ast: ASTNode
+    constant_values: dict         // Valores constantes de variables
+
+    métodos:
+        analyze() → (AST_anotado, errores)
+        build_symbol_table(nodo)
+        annotate_types(nodo) → nodo_anotado
+        evaluate_constant_expression(nodo) → valor o NULL
+        types_compatible(tipo1, tipo2) → bool
+        get_binary_op_result_type(op, tipo1, tipo2) → tipo o NULL
+
+
+10. ALGORITMOS PRINCIPALES
+===============================================================================
+10.1 CONSTRUCCIÓN DE TABLA DE SÍMBOLOS
+---------------------------------------
+ALGORITMO: construir_tabla_simbolos(nodo)
+1. Si nodo es NULL, retornar
+2. Si nodo es VariableDeclarationNode:
+     Extraer tipo y para cada identificador:
+       Crear entrada con nombre, tipo, línea, columna
+       Asignar dirección de memoria e insertar en tabla
+3. Para cada hijo: llamar recursivamente
+
+10.2 ANOTACIÓN DE TIPOS
+-----------------------
+ALGORITMO: anotar_tipos(nodo)
+1. Si nodo es NULL, retornar NULL
+2. Crear nodo_anotado como copia
+3. Según tipo de nodo:
+   AssignmentNode: Buscar ID en tabla, verificar compatibilidad,
+                   evaluar expresión constante
+   BinaryOpNode: Anotar hijos, verificar tipos, calcular resultado,
+                 evaluar constante
+   IdentifierNode: Buscar en tabla, asignar tipo, registrar referencia
+   NumberNode/BooleanNode: Determinar y asignar tipo
+4. Retornar nodo_anotado
+
+10.3 EVALUACIÓN DE EXPRESIONES CONSTANTES
+------------------------------------------
+ALGORITMO: evaluar_expresion_constante(nodo)
+1. Si NumberNode: retornar valor numérico
+2. Si BooleanNode: retornar valor booleano
+3. Si IdentifierNode: buscar en tabla_constantes
+4. Si BinaryOpNode:
+     Evaluar izquierdo y derecho
+     Si ambos != NULL: calcular y retornar resultado
+5. Sino: retornar NULL
+
+10.4 COMPATIBILIDAD DE TIPOS
+-----------------------------
+ALGORITMO: tipos_compatibles(tipo1, tipo2)
+1. Si tipo1 == tipo2: retornar True
+2. Si tipo1 == "float" y tipo2 == "int": retornar True
+3. Sino: retornar False
+
+10.5 TIPO RESULTADO DE OPERACIÓN BINARIA
+-----------------------------------------
+ALGORITMO: obtener_tipo_resultado_binario(op, tipo1, tipo2)
+1. Si op en ['+', '-', '*'] y ambos tipos numéricos:
+     Retornar 'float' si alguno es float, sino 'int'
+2. Si op es '/' y ambos numéricos: retornar 'float'
+3. Si op relacional ['<', '>', '==', '!='] y ambos numéricos: retornar 'bool'
+4. Si op lógico ['&&', '||'] y ambos bool: retornar 'bool'
+5. Sino: retornar NULL
+
+
+11. COMPLEJIDAD COMPUTACIONAL
+===============================================================================
+Sea n = número de nodos del AST, r = referencias a variables
+
+Construcción de tabla de símbolos: O(n)
+Anotación de tipos: O(n)
+Rastreo de referencias: O(r)
+Complejidad total: O(n + r) ≈ O(n)
+
+
+12. CONSIDERACIONES DE IMPLEMENTACIÓN
+===============================================================================
+• Los errores se acumulan, no detienen el análisis
+• Tabla de constantes separada para propagar valores conocidos
+• El AST original se preserva intacto
+• División trunca (no redondea): 7/2 = 3
+• Direcciones de memoria secuenciales desde 0
+
+
+13. REFERENCIAS
+===============================================================================
+• Aho, Lam, Sethi, Ullman (2006). "Compilers: Principles, Techniques, and Tools"
+• Cooper & Torczon (2011). "Engineering a Compiler"
+• Estándares de compatibilidad basados en C/C++ y Java
+
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================

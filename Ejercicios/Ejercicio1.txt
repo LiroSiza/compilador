@@ -1,0 +1,30 @@
+// Programa para convertir peso y longitud de un dinosaurio
+// De libras a kilogramos y de pies a metros
+// 1 libra = 0.453592 kg
+// 1 pie = 0.3048 metros
+
+main {
+    float pesoLibras, longitudPies;
+    float pesoKg, longitudMetros;
+    
+    // Solicitar datos del dinosaurio
+    cout << "Ingrese el peso del dinosaurio en libras: ";
+    cin >> pesoLibras;
+    
+    cout << "Ingrese la longitud del dinosaurio en pies: ";
+    cin >> longitudPies;
+    
+    // Realizar conversiones
+    // 1 libra = 0.453592 kg (usamos aproximación 0.45359)
+    pesoKg = pesoLibras * 0.45359;
+    
+    // 1 pie = 0.3048 metros
+    longitudMetros = longitudPies * 0.3048;
+    
+    // Mostrar resultados
+    cout << "Peso en kilogramos: ";
+    cout << pesoKg;
+    
+    cout << "Longitud en metros: ";
+    cout << longitudMetros;
+}

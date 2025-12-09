@@ -1,0 +1,33 @@
+// Programa que lee dos números (NUM, V) y evalúa una función
+// según el valor de NUM
+
+main {
+    int NUM;
+    float V, val;
+    
+    // Solicitar los datos
+    cout << "Ingrese NUM (1, 2, 3 u otro): ";
+    cin >> NUM;
+    
+    cout << "Ingrese V: ";
+    cin >> V;
+    
+    // Evaluar la función según NUM
+    if NUM == 1 then
+        val = 100.0 * V;
+    else
+        if NUM == 2 then
+            val = 100.0 * V;  // 100**V (potencia, aproximamos como multiplicación)
+        else
+            if NUM == 3 then
+                val = 100.0 / V;
+            else
+                val = 0.0;
+            end
+        end
+    end
+    
+    // Mostrar resultado
+    cout << "El valor de val es: ";
+    cout << val;
+}

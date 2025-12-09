@@ -1,0 +1,140 @@
+// Programa para calcular ventas de boletos en estadio
+// Maneja 5 tipos de localidades con diferentes precios
+
+main {
+    // Precios de las localidades
+    float p1, p2, p3, p4, p5;
+
+    // Contadores de boletos por tipo
+    int cont1, cont2, cont3, cont4, cont5;
+
+    // Variables para lectura de ventas
+    int clave, cantidad;
+
+    // Variables para cálculos
+    float importe, totalRecaudado;
+
+    // Inicializar contadores y total
+    cont1 = 0;
+    cont2 = 0;
+    cont3 = 0;
+    cont4 = 0;
+    cont5 = 0;
+    totalRecaudado = 0.0;
+
+    // a) Leer los precios de las localidades
+    cout << "Ingrese el precio de la localidad 1: ";
+    cin >> p1;
+
+    cout << "Ingrese el precio de la localidad 2: ";
+    cin >> p2;
+
+    cout << "Ingrese el precio de la localidad 3: ";
+    cin >> p3;
+
+    cout << "Ingrese el precio de la localidad 4: ";
+    cin >> p4;
+
+    cout << "Ingrese el precio de la localidad 5: ";
+    cin >> p5;
+
+    // b) Leer datos de ventas (clave = 0 para terminar)
+    cout << "\nIngrese las ventas de boletos (clave 0 para terminar):\n";
+
+    cout << "Clave de localidad: ";
+    cin >> clave;
+
+    while clave != 0
+        cout << "Cantidad de boletos: ";
+        cin >> cantidad;
+
+        // c) Calcular e imprimir datos de esta venta
+        if clave == 1 then
+            importe = p1 * cantidad;
+        else
+            if clave == 2 then
+                importe = p2 * cantidad;
+            else
+                if clave == 3 then
+                    importe = p3 * cantidad;
+                else
+                    if clave == 4 then
+                        importe = p4 * cantidad;
+                    else
+                        if clave == 5 then
+                            importe = p5 * cantidad;
+                        else
+                            importe = 0.0;  // Clave inválida
+                        end
+                    end
+                end
+            end
+        end
+
+        // Mostrar datos de la venta
+        cout << "Venta - Clave: ";
+        cout << clave;
+        cout << ", Cantidad: ";
+        cout << cantidad;
+        cout << ", Importe: ";
+        cout << importe;
+        cout << "\n";
+
+        // d) Actualizar contadores por tipo
+        if clave == 1 then
+            cont1 = cont1 + cantidad;
+        else
+            if clave == 2 then
+                cont2 = cont2 + cantidad;
+            else
+                if clave == 3 then
+                    cont3 = cont3 + cantidad;
+                else
+                    if clave == 4 then
+                        cont4 = cont4 + cantidad;
+                    else
+                        if clave == 5 then
+                            cont5 = cont5 + cantidad;
+                        end
+                    end
+                end
+            end
+        end
+
+        // e) Actualizar recaudación total
+        totalRecaudado = totalRecaudado + importe;
+
+        // Leer siguiente venta
+        cout << "Clave de localidad: ";
+        cin >> clave;
+    end
+
+    // Mostrar resumen final
+    cout << "\nRESUMEN DE VENTAS\n";
+    cout << "==================\n";
+
+    cout << "Boletos vendidos por tipo:\n";
+    cout << "Tipo 1: ";
+    cout << cont1;
+    cout << "\n";
+
+    cout << "Tipo 2: ";
+    cout << cont2;
+    cout << "\n";
+
+    cout << "Tipo 3: ";
+    cout << cont3;
+    cout << "\n";
+
+    cout << "Tipo 4: ";
+    cout << cont4;
+    cout << "\n";
+
+    cout << "Tipo 5: ";
+    cout << cont5;
+    cout << "\n";
+
+    cout << "Recaudacion total del estadio: ";
+    cout << totalRecaudado;
+    cout << "\n";
+}

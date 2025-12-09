@@ -954,7 +954,9 @@ class IDE:
                 self.interpreter.provide_input(user_input)
                 self.waiting_for_input = False
                 
-                # Disable input editing
+                # Insert newline after input to separate from output
+                self.terminal_text.config(state=tk.NORMAL)
+                self.terminal_text.insert(tk.END, "\n")
                 self.terminal_text.config(state=tk.DISABLED)
                 
                 # Continue execution after a short delay to allow UI update

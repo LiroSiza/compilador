@@ -202,5 +202,5 @@ class PCodeInterpreter:
         elif opcode == 'cout':
             if self.stack:
                 value = self.stack.pop()
-                self.output_buffer.append(str(value))
+                self.output_buffer.append(str(value) + '\n')
         # Add more opcodes as needed

@@ -19,6 +19,8 @@ class Token:
             6: "OP_REL",
             7: "SIMBOLO",
             8: "ASIGNACION",
+            11: "CADENA",
+            12: "OP_STREAM",
             9: "ERROR"
         }
         type_name = token_names.get(self.type, str(self.type))
@@ -46,6 +48,8 @@ class Lexer:
             'REL_LOG_OP': 6,   # Relational/logical operators
             'SYMBOL': 7,       # Symbols
             'ASSIGNMENT': 8,   # Assignment
+            'STREAM_OP': 12,   # Stream operators (<< >>)
+            'STRING': 11,      # String literals
             'ERROR': 9         # Errors
         }
         
@@ -83,11 +87,18 @@ class Lexer:
             
             
             
+            # Stream operators (must come before single < >)
+            (r'<<', self.TOKEN_TYPES['STREAM_OP']),  # output stream
+            (r'>>', self.TOKEN_TYPES['STREAM_OP']),  # input stream
+            
             # Relational operators
             (r'<=|>=|==|!=|<|>', self.TOKEN_TYPES['REL_LOG_OP']),
             
             # Logical operators
             (r'&&|\|\|', self.TOKEN_TYPES['REL_LOG_OP']),
+            
+            # Strings
+            (r'"[^"]*"', self.TOKEN_TYPES['STRING']),  # String literals
             
             # Symbols
             (r'[\(\)\{\},;]', self.TOKEN_TYPES['SYMBOL']),

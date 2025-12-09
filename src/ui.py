@@ -13,6 +13,7 @@ from lexer import Lexer
 from parser import Parser
 from semantic_analyzer import SemanticAnalyzer
 from intermediate_code_generator import IntermediateCodeGenerator
+from pcode_interpreter import PCodeInterpreter
 
 class IDE:
     def __init__(self, root):
@@ -218,7 +219,11 @@ class IDE:
         
         self.btn_intermedio = tk.Button(self.results_buttons_frame, text="Intermedio", 
                                       command=lambda: self.show_result("intermedio"))
-        self.btn_intermedio.pack(side=tk.LEFT, padx=2)        # Área de texto para resultados (después de los botones)
+        self.btn_intermedio.pack(side=tk.LEFT, padx=2)
+        
+        self.btn_ejecutar = tk.Button(self.results_buttons_frame, text="Ejecutar", 
+                                    command=lambda: self.show_result("ejecutar"))
+        self.btn_ejecutar.pack(side=tk.LEFT, padx=2)        # Área de texto para resultados (después de los botones)
         self.result_text = tk.Text(self.results_frame)  # Increased height from 10 to 15
 
         self.result_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
@@ -246,6 +251,33 @@ class IDE:
         self.ast_scroll = ttk.Scrollbar(self.results_frame, orient=tk.VERTICAL, command=self.ast_tree.yview)
         self.ast_tree.configure(yscrollcommand=self.ast_scroll.set)
         self.ast_scroll.pack_forget()
+
+        # Frame para ejecución (inicialmente oculto)
+        self.execution_frame = tk.Frame(self.results_frame, bg=self.colors['bg_main'])
+        
+        # Terminal-like interface
+        self.terminal_label = tk.Label(self.execution_frame, text="Terminal de Ejecución:", 
+                                     bg=self.colors['bg_main'], fg=self.colors['fg_main'])
+        self.terminal_label.pack(anchor=tk.W, padx=5, pady=(5,0))
+        
+        # Start button
+        self.start_execution_button = tk.Button(self.execution_frame, text="Iniciar Ejecución", 
+                                              command=self.execute_code, bg=self.colors['accent'], fg=self.colors['fg_main'])
+        self.start_execution_button.pack(pady=(0,5))
+        
+        self.terminal_text = tk.Text(self.execution_frame, bg=self.colors['bg_secondary'], 
+                                   fg=self.colors['fg_main'], font=self.fonts['editor'],
+                                   insertbackground=self.colors['fg_main'])
+        self.terminal_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0,5))
+        
+        # Configure terminal for input handling
+        self.terminal_text.bind('<Return>', self.handle_terminal_input)
+        self.terminal_text.bind('<Key>', self.prevent_editing)
+        self.terminal_text.config(state=tk.DISABLED)  # Start disabled
+        
+        # Execution state
+        self.interpreter = None
+        self.waiting_for_input = False
 
         # Frame para errores (derecha)
         self.errors_frame = tk.LabelFrame(self.results_errors_frame, text="Errores", bg=self.colors['bg_main'], fg=self.colors['fg_main'])
@@ -821,13 +853,130 @@ class IDE:
             self.update_result("Error en la generación de código intermedio")
 
     def execute_code(self):
-        """Simula la ejecución del código"""
-        self.update_result("Ejecutando el código...\n")
-        self.update_error("No se encontraron errores en la ejecución del código\n")
+        """Iniciar la ejecución interactiva del código"""
+        try:
+            if not hasattr(self, 'intermediate_instructions') or not self.intermediate_instructions:
+                self.terminal_text.insert(tk.END, "Error: No hay código intermedio generado.\nEjecute primero el análisis semántico e intermedio.\n")
+                return
+            
+            # Convert instructions format for interpreter
+            pcode_instructions = [(instr['instruction'], instr['description']) for instr in self.intermediate_instructions]
+            
+            # Create and reset interpreter
+            self.interpreter = PCodeInterpreter(pcode_instructions, self.symbol_table)
+            self.interpreter.reset()
+            
+            # Clear terminal
+            self.terminal_text.delete(1.0, tk.END)
+            self.terminal_text.insert(tk.END, "Ejecución iniciada. Presione Enter después de cada entrada.\n\n")
+            
+            # Start execution
+            self.continue_execution()
+            
+        except Exception as e:
+            import traceback
+            error_message = f"Error en la ejecución:\n{str(e)}\n\n{traceback.format_exc()}"
+            self.terminal_text.insert(tk.END, f"Error: {str(e)}\n")
+            self.update_error(error_message)
+
+    def continue_execution(self):
+        """Continuar la ejecución paso a paso"""
+        if not self.interpreter:
+            return
+            
+        try:
+            while True:
+                waiting = self.interpreter.step()
+                
+                # Show any pending output
+                output = self.interpreter.get_pending_output()
+                if output:
+                    # Temporarily enable terminal to insert output
+                    was_disabled = str(self.terminal_text.cget('state')) == 'disabled'
+                    if was_disabled:
+                        self.terminal_text.config(state=tk.NORMAL)
+                    self.terminal_text.insert(tk.END, output)
+                    self.terminal_text.see(tk.END)
+                    if was_disabled:
+                        self.terminal_text.config(state=tk.DISABLED)
+                
+                if self.interpreter.is_finished():
+                    # Temporarily enable terminal to insert completion message
+                    was_disabled = str(self.terminal_text.cget('state')) == 'disabled'
+                    if was_disabled:
+                        self.terminal_text.config(state=tk.NORMAL)
+                    self.terminal_text.insert(tk.END, "\n\nEjecución completada.\n")
+                    self.terminal_text.see(tk.END)
+                    if was_disabled:
+                        self.terminal_text.config(state=tk.DISABLED)
+                    break
+                    
+                if waiting:
+                    # Waiting for input
+                    # Temporarily enable terminal to insert prompt
+                    was_disabled = str(self.terminal_text.cget('state')) == 'disabled'
+                    if was_disabled:
+                        self.terminal_text.config(state=tk.NORMAL)
+                    self.terminal_text.insert(tk.END, "\n> ")
+                    self.terminal_text.see(tk.END)
+                    if was_disabled:
+                        self.terminal_text.config(state=tk.DISABLED)
+                    # Enable input at the end
+                    self.terminal_text.config(state=tk.NORMAL)
+                    self.waiting_for_input = True
+                    break
+                    
+        except Exception as e:
+            # Temporarily enable terminal to insert error message
+            was_disabled = str(self.terminal_text.cget('state')) == 'disabled'
+            if was_disabled:
+                self.terminal_text.config(state=tk.NORMAL)
+            self.terminal_text.insert(tk.END, f"\nError durante la ejecución: {str(e)}\n")
+            self.terminal_text.see(tk.END)
+            if was_disabled:
+                self.terminal_text.config(state=tk.DISABLED)
+
+    def handle_terminal_input(self, event):
+        """Manejar entrada del usuario en el terminal"""
+        if not self.waiting_for_input or not self.interpreter:
+            return
+            
+        # Get the current line
+        text = self.terminal_text.get(1.0, tk.END)
+        lines = text.split('\n')
+        current_line = lines[-2] if len(lines) >= 2 else ""
+        
+        if current_line.startswith('> '):
+            user_input = current_line[2:].strip()
+            
+            if user_input:
+                # Provide input to interpreter
+                self.interpreter.provide_input(user_input)
+                self.waiting_for_input = False
+                
+                # Disable input editing
+                self.terminal_text.config(state=tk.DISABLED)
+                
+                # Continue execution after a short delay to allow UI update
+                self.root.after(50, self.continue_execution)
+            
+        return "break"  # Prevent default behavior
+
+    def prevent_editing(self, event):
+        """Prevenir edición en áreas no permitidas"""
+        if not self.waiting_for_input:
+            return "break"  # Prevent editing when not waiting for input
+        return None
     
     def show_result(self, result_type):
         """Muestra el resultado correspondiente al botón presionado"""
         print(f"DEBUG: show_result called with result_type='{result_type}'")
+        
+        # Hide all result views first
+        self.result_text.pack_forget()
+        self.ast_tree.pack_forget()
+        self.ast_scroll.pack_forget()
+        self.execution_frame.pack_forget()
         
         if result_type == "semantico" and hasattr(self, 'last_annotated_ast') and self.last_annotated_ast:
             print(f"DEBUG: Showing annotated AST. hasattr: {hasattr(self, 'last_annotated_ast')}, is not None: {self.last_annotated_ast is not None}")
@@ -862,6 +1011,17 @@ class IDE:
             self.ast_scroll.pack_forget()
             self.result_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
             self.update_result(str(self.symbol_table))
+            
+        elif result_type == "ejecutar":
+            # Show execution interface
+            self.ast_tree.pack_forget()
+            self.ast_scroll.pack_forget()
+            self.result_text.pack_forget()
+            self.execution_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+            # Reset execution state when showing the tab
+            self.interpreter = None
+            self.waiting_for_input = False
+            self.terminal_text.config(state=tk.DISABLED)
             
         else:
             print(f"DEBUG: Showing default text for {result_type}")

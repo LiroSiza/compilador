@@ -130,6 +130,8 @@ class SemanticAnalyzer:
             annotated_node = self.annotate_number(node)
         elif isinstance(node, BooleanNode):
             annotated_node = self.annotate_boolean(node)
+        elif isinstance(node, StringNode):
+            annotated_node = self.annotate_string(node)
         elif isinstance(node, UnaryOpNode):
             annotated_node = self.annotate_unary_op(node)
         else:
@@ -309,9 +311,15 @@ class SemanticAnalyzer:
         annotated.value = node.value.lower() == 'true'
         return annotated
 
+    def annotate_string(self, node):
+        """Annotate string literal"""
+        annotated = StringNode(node.value, node.line, node.column)
+        annotated.semantic_type = "string"
+        return annotated
+
     def is_pure_constant_expression(self, node):
         """Check if expression consists only of literals (no variables)"""
-        if isinstance(node, NumberNode) or isinstance(node, BooleanNode):
+        if isinstance(node, NumberNode) or isinstance(node, BooleanNode) or isinstance(node, StringNode):
             return True
         elif isinstance(node, IdentifierNode):
             # Variables are not pure constants
@@ -478,12 +486,12 @@ class SemanticAnalyzer:
 
     def annotate_output(self, node):
         """Annotate output statement"""
-        annotated = OutputNode(None)
+        annotated = OutputNode([])
         annotated.line = node.line
         annotated.column = node.column
 
-        if node.children:
-            expr = self.annotate_types(node.children[0])
+        for child in node.children:
+            expr = self.annotate_types(child)
             annotated.add_child(expr)
 
         return annotated

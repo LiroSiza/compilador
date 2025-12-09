@@ -14,7 +14,7 @@ main {
         a = 2.71;
         flag = false;
     end
-
+    cout << "Ingresa el numero de llamadas: ";
     cin >> z;
     cout << a;
 }

@@ -77,9 +77,13 @@ class InputNode(ASTNode):
         self.add_child(identifier)
 
 class OutputNode(ASTNode):
-    def __init__(self, expression):
+    def __init__(self, expressions):
         super().__init__("sent_out")
-        self.add_child(expression)
+        if isinstance(expressions, list):
+            for expr in expressions:
+                self.add_child(expr)
+        else:
+            self.add_child(expressions)
 
 class BinaryOpNode(ASTNode):
     def __init__(self, operator, left, right, line=None, column=None):
@@ -110,6 +114,10 @@ class NumberNode(ASTNode):
 class BooleanNode(ASTNode):
     def __init__(self, value, line=None, column=None):
         super().__init__("BOOL", value, line, column)
+
+class StringNode(ASTNode):
+    def __init__(self, value, line=None, column=None):
+        super().__init__("STRING", value, line, column)
 
 class PostIncrementNode(ASTNode):
     def __init__(self, identifier, operator):
@@ -391,36 +399,39 @@ class Parser:
     def parse_sent_in(self):
         # cin >> id ;
         self.match(4, 'cin')
-        # expect two '>' symbols
-        for _ in range(2):
-            tok = self.current()
-            if tok and tok.type == 6 and tok.value == '>':
-                self.advance()
-            else:
-                if tok:
-                    self.errors.append(f"Se esperaba '>' en línea {tok.line}, col {tok.column}")
+        # expect >>
+        tok = self.current()
+        if tok and tok.type == 12 and tok.value == '>>':
+            self.advance()
+        else:
+            if tok:
+                self.errors.append(f"Se esperaba '>>' en línea {tok.line}, col {tok.column}")
         id_tok = self.match(2)
         id_node = IdentifierNode(id_tok.value, id_tok.line, id_tok.column) if id_tok else None
         self.match(7, ';')
         return InputNode(id_node)
 
     def parse_sent_out(self):
-        # cout << salida
+        # cout << expr << expr << ... ;
         self.match(4, 'cout')
-        # expect two '<'
-        for _ in range(2):
-            tok = self.current()
-            if tok and tok.type == 6 and tok.value == '<':
-                self.advance()
+        expressions = []
+        
+        # Parse << expr pairs
+        while self.current() and self.current().type == 12 and self.current().value == '<<':
+            self.advance()  # consume <<
+            
+            # parse expression
+            expr = self.parse_expresion()
+            if expr:
+                expressions.append(expr)
             else:
-                if tok:
-                    self.errors.append(f"Se esperaba '<' en línea {tok.line}, col {tok.column}")
-        # Parse expression until semicolon
-        expr = self.parse_expresion()
+                break
+        
         # optional semicolon
         if self.current() and self.current().type == 7 and self.current().value == ';':
             self.advance()
-        return OutputNode(expr)
+        
+        return OutputNode(expressions)
 
     def parse_expresion(self):
         # parse simple expression
@@ -501,6 +512,9 @@ class Parser:
         elif tok.type == 4 and tok.value in ('true','false'):  # boolean
             self.advance()
             return BooleanNode(tok.value, tok.line, tok.column)
+        elif tok.type == 11:  # string
+            self.advance()
+            return StringNode(tok.value, tok.line, tok.column)
         elif tok.type == 6 and tok.value in ('!'):
             op = tok.value
             self.advance()

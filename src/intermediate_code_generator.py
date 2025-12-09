@@ -97,6 +97,8 @@ class IntermediateCodeGenerator:
             self.generate_number_load(node)
         elif isinstance(node, BooleanNode):
             self.generate_boolean_load(node)
+        elif isinstance(node, StringNode):
+            self.generate_string_load(node)
 
     def generate_binary_op(self, node):
         """Generate code for binary operation"""
@@ -159,6 +161,12 @@ class IntermediateCodeGenerator:
         value = 1 if node.value else 0
         self.add_instruction(f"ldc {value}", f"carga constante booleano {node.value}")
 
+    def generate_string_load(self, node):
+        """Generate code to load string constant"""
+        # Remove quotes from the string value
+        string_value = node.value.strip('"')
+        self.add_instruction(f"lds \"{string_value}\"", f"carga constante cadena \"{string_value}\"")
+
     def generate_if(self, node):
         """Generate code for if statement"""
         if len(node.children) >= 2:
@@ -192,7 +200,7 @@ class IntermediateCodeGenerator:
         if len(node.children) >= 2:
             # Start label
             start_label = self.new_label()
-            self.add_instruction(f"lab {start_label}", f"etiqueta inicio de bucle while")
+            self.place_label(start_label)
 
             # Generate condition
             self.generate_expression(node.children[0])
@@ -208,14 +216,14 @@ class IntermediateCodeGenerator:
             self.add_instruction(f"ujp {start_label}", f"salta a inicio del bucle while")
 
             # End label
-            self.add_instruction(f"lab {end_label}", f"etiqueta fin de bucle while")
+            self.place_label(end_label)
 
     def generate_do_until(self, node):
         """Generate code for do-until loop"""
         if len(node.children) >= 2:
             # Start label
             start_label = self.new_label()
-            self.add_instruction(f"lab {start_label}", f"etiqueta inicio de bucle do-until")
+            self.place_label(start_label)
 
             # Generate body
             self.generate_statement(node.children[0])
@@ -232,7 +240,7 @@ class IntermediateCodeGenerator:
             var_node = node.children[0]
             if isinstance(var_node, IdentifierNode):
                 # Read value
-                self.add_instruction("rd", "lee valor desde entrada estándar")
+                self.add_instruction("cin", "lee valor desde entrada estándar")
 
                 # Store to variable
                 entry = self.symbol_table.lookup(var_node.value)
@@ -241,12 +249,12 @@ class IntermediateCodeGenerator:
 
     def generate_output(self, node):
         """Generate code for output statement"""
-        if node.children:
+        for child in node.children:
             # Generate expression to output
-            self.generate_expression(node.children[0])
+            self.generate_expression(child)
 
             # Write to output
-            self.add_instruction("wr", "escribe valor en salida estándar")
+            self.add_instruction("cout", "escribe valor en salida estándar")
 
     def add_instruction(self, instruction, description):
         """Add an instruction to the list"""
@@ -254,6 +262,15 @@ class IntermediateCodeGenerator:
             'address': self.next_address,
             'instruction': instruction,
             'description': description
+        })
+        self.next_address += 1
+
+    def place_label(self, label):
+        """Place a label at the current address"""
+        self.instructions.append({
+            'address': self.next_address,
+            'instruction': f"lab {label}",
+            'description': f"etiqueta {label}"
         })
         self.next_address += 1
 

@@ -133,6 +133,10 @@ class PCodeInterpreter:
                 self.stack.append(a / b)
             else:
                 raise ValueError("Division by zero")
+        elif opcode == 'pow':
+            b = self.stack.pop()
+            a = self.stack.pop()
+            self.stack.append(a ** b)
         elif opcode == 'mod':
             b = self.stack.pop()
             a = self.stack.pop()

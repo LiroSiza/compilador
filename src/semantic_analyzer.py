@@ -542,6 +542,10 @@ class SemanticAnalyzer:
             # Division always results in float
             if type1 in ['int', 'float'] and type2 in ['int', 'float']:
                 return 'float'
+        elif op == '^':
+            # Power operation always results in float
+            if type1 in ['int', 'float'] and type2 in ['int', 'float']:
+                return 'float'
 
         # Comparison operations
         if op in ['<', '<=', '>', '>=', '==', '!=']:

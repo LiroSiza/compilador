@@ -17,7 +17,7 @@ main {
         val = 100.0 * V;
     else
         if NUM == 2 then
-            val = 100.0 * V;  // 100**V (potencia, aproximamos como multiplicación)
+            val = 100.0 ^ V;  // 100**V (potencia)
         else
             if NUM == 3 then
                 val = 100.0 / V;

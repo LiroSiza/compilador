@@ -119,6 +119,8 @@ class IntermediateCodeGenerator:
                 self.add_instruction("mul", "multiplica los dos valores superiores de la pila")
             elif op == '/':
                 self.add_instruction("div", "divide los dos valores superiores de la pila")
+            elif op == '^':
+                self.add_instruction("pow", "eleva el penúltimo valor a la potencia del último valor de la pila")
             elif op == '<':
                 self.add_instruction("les", "comparación menor que")
             elif op == '<=':

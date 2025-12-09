@@ -1,0 +1,64 @@
+// Programa para calcular el pago a un trabajador
+// considerando sueldo base, horas extras y categoría
+
+main {
+    float sueldoBase, pagoHorasExtras, pagoTotal;
+    int horasExtras, categoria;
+    float precioHoraExtra;
+
+    // Solicitar datos del trabajador
+    cout << "Ingrese el sueldo base del trabajador: ";
+    cin >> sueldoBase;
+
+    cout << "Ingrese las horas extras trabajadas: ";
+    cin >> horasExtras;
+
+    cout << "Ingrese la categoria del trabajador (1-4): ";
+    cin >> categoria;
+
+    // Validar horas extras (máximo 30)
+    if horasExtras > 30 then
+        horasExtras = 30;
+    end
+
+    // Calcular precio por hora extra según categoría
+    if categoria == 1 then
+        precioHoraExtra = 30.0;
+    else
+        if categoria == 2 then
+            precioHoraExtra = 38.0;
+        else
+            if categoria == 3 then
+                precioHoraExtra = 50.0;
+            else
+                if categoria == 4 then
+                    precioHoraExtra = 70.0;
+                else
+                    precioHoraExtra = 0.0;  // Categoría > 4 no paga horas extras
+                end
+            end
+        end
+    end
+
+    // Calcular pago de horas extras
+    pagoHorasExtras = precioHoraExtra * horasExtras;
+
+    // Calcular pago total
+    pagoTotal = sueldoBase + pagoHorasExtras;
+
+    // Mostrar resultados
+    cout << "Sueldo base: ";
+    cout << sueldoBase;
+
+    cout << "Horas extras a pagar: ";
+    cout << horasExtras;
+
+    cout << "Precio por hora extra: ";
+    cout << precioHoraExtra;
+
+    cout << "Pago por horas extras: ";
+    cout << pagoHorasExtras;
+
+    cout << "Pago total: ";
+    cout << pagoTotal;
+}

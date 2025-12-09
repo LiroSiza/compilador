@@ -1,0 +1,57 @@
+// Programa para analizar ventas de un vendedor
+// Clasifica las ventas en tres categorías:
+// 1. $200 o menos
+// 2. Mayores a $200 pero menores a $400
+// 3. $400 o superiores
+
+main {
+    float venta;
+    int contadorBajo, contadorMedio, contadorAlto;
+
+    // Inicializar contadores
+    contadorBajo = 0;
+    contadorMedio = 0;
+    contadorAlto = 0;
+
+    // Leer ventas hasta que se ingrese 0 o negativo
+    cout << "Ingrese las ventas del vendedor (0 para terminar): ";
+    cout << "\n";
+
+    // Leer primera venta
+    cout << "Venta: ";
+    cin >> venta;
+
+    while venta > 0
+        // Clasificar la venta
+        if venta <= 200.0 then
+            contadorBajo = contadorBajo + 1;
+        else
+            if venta < 400.0 then
+                contadorMedio = contadorMedio + 1;
+            else
+                contadorAlto = contadorAlto + 1;
+            end
+        end
+
+        // Leer siguiente venta
+        cout << "Venta: ";
+        cin >> venta;
+    end
+
+    // Mostrar resultados
+    cout << "\n";
+    cout << "RESULTADOS DEL ANALISIS DE VENTAS";
+    cout << "\n";
+
+    cout << "Ventas de $200 o menos: ";
+    cout << contadorBajo;
+    cout << "\n";
+
+    cout << "Ventas mayores a $200 pero menores a $400: ";
+    cout << contadorMedio;
+    cout << "\n";
+
+    cout << "Ventas de $400 o superiores: ";
+    cout << contadorAlto;
+    cout << "\n";
+}
